@@ -1,0 +1,35 @@
+[project]
+name = "hr-operations-agent"
+version = "0.1.0"
+description = "Multi-agent HR operations system. Natural-language HR requests routed to MCP servers (HRIS, jurisdiction, policy) by a Sonnet orchestrator with Haiku classification."
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.104.1",
+    "fastapi>=0.136.1",
+    "httpx>=0.28.1",
+    "mcp>=1.27.1",
+    "openai>=2.38.0",
+    "pinecone>=9.0.1",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+    "supabase>=2.30.0",
+    "uvicorn[standard]>=0.47.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.15.14",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
