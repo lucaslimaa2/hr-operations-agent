@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="HR Operations Agent: natural-language HR requests routed through a multi-agent pipeline. Demo." />
+  <title>HR Operations Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/public/style.css" />
+</head>
+<body>
+  <main>
+    <nav class="back-links">
+      <a href="https://lucaslima.xyz/ai-portfolio">&larr; AI Portfolio</a>
+      <a href="https://lucaslima.xyz">&larr; lucaslima.xyz</a>
+    </nav>
+
+    <header>
+      <h1>HR Operations Agent</h1>
+      <p class="tagline">
+        Natural-language HR requests routed through a multi-agent pipeline:
+        Haiku classifies the intent, Sonnet reasons over MCP tool servers,
+        every decision is audit-logged. Compliance logic is deterministic —
+        the LLM never infers labor law from training data.
+      </p>
+
+      <div class="coverage">
+        <span class="coverage-label">Jurisdiction coverage:</span>
+        <span class="badge">BR · CLT</span>
+        <span class="badge">BR · PJ</span>
+        <span class="badge">DE</span>
+        <span class="badge">US-CA</span>
+        <span class="badge muted">+ more in later phases</span>
+      </div>
+    </header>
+
+    <section id="chat">
+      <h2 class="section-title">Ask the agent</h2>
+      <div id="history" aria-live="polite"></div>
+
+      <form id="composer">
+        <input
+          id="question"
+          type="text"
+          placeholder="What's the minimum notice in Germany for a 5-year tenured employee?"
+          autocomplete="off"
+          required
+          maxlength="2000"
+        />
+        <button type="submit" id="send">Ask</button>
+      </form>
+
+      <div id="suggestions">
+        <span class="suggest-label">Try:</span>
+        <button class="suggest" type="button">What's the minimum notice period to terminate someone in Germany?</button>
+        <button class="suggest" type="button">Terminate Sarah Chen with 2 weeks notice. She started in Germany on 2020-01-15.</button>
+        <button class="suggest" type="button">What's João's aviso prévio? He's a BR CLT employee with 4 years tenure.</button>
+        <button class="suggest" type="button">What rules apply for a layoff of 60 people at a 200-employee California company?</button>
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        Project of <a href="https://lucaslima.xyz/ai-portfolio" target="_blank" rel="noopener">Lucas Lima's AI portfolio</a>.
+        Synthetic employees; not a real HRIS. Compliance logic derived from primary statutes — see <code>docs/jurisdiction.md</code> in the repo.
+      </p>
+    </footer>
+  </main>
+
+  <script src="/public/app.js"></script>
+</body>
+</html>
