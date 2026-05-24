@@ -96,13 +96,28 @@ function handleEvent(event, agentMsg) {
     case "tool_result":
       markToolPill(agentMsg, event.id, event.is_error ? "error" : "done");
       break;
+    case "resolver_check":
+      // Show the resolver firing inline — informational only.
+      addResolverChip(agentMsg, event.tool);
+      break;
+    case "escalation":
+      // Conflict resolver returned 'escalate'. Render a structured card with
+      // the brief (conflict / risk / recommendation / question for HR).
+      renderEscalationCard(agentMsg, event.action_summary, event.brief);
+      break;
     case "text_delta":
       appendDeltaText(agentMsg, event.text);
       break;
     case "done":
       sessionId = event.session_id;
       finalizeAgentMessage(agentMsg);
-      addCostFooter(agentMsg, event.cost_usd, event.tool_call_count, event.truncated);
+      addCostFooter(
+        agentMsg,
+        event.cost_usd,
+        event.tool_call_count,
+        event.truncated,
+        event.escalated
+      );
       break;
     case "error":
       finalizeAgentMessage(agentMsg, event.message, true);
@@ -186,6 +201,36 @@ function markToolPill(agentMsg, id, state) {
   }
 }
 
+function addResolverChip(agentMsg, toolName) {
+  const chip = document.createElement("div");
+  chip.className = "tool-pill resolver";
+  chip.innerHTML = `<span class="dot"></span> <span class="tool-name">conflict_resolver</span><span class="tool-state"> · gating ${escapeHtml(toolName)}</span>`;
+  agentMsg.tools.appendChild(chip);
+  scrollToBottom();
+}
+
+function renderEscalationCard(agentMsg, actionSummary, brief) {
+  if (!brief) return;
+  const risk = (brief.risk_level || "medium").toLowerCase();
+  const card = document.createElement("div");
+  card.className = `escalation-card risk-${risk}`;
+  card.innerHTML = `
+    <div class="escalation-header">
+      <span class="escalation-badge">⚠ Escalated to HR</span>
+      <span class="escalation-risk risk-${risk}">${risk.toUpperCase()} RISK</span>
+    </div>
+    <div class="escalation-action">${escapeHtml(actionSummary || "")}</div>
+    <dl class="escalation-fields">
+      <dt>Conflict</dt><dd>${escapeHtml(brief.conflict || "")}</dd>
+      <dt>Recommendation</dt><dd>${escapeHtml(brief.recommendation || "")}</dd>
+      <dt>Question for HR</dt><dd>${escapeHtml(brief.question_for_hr || "")}</dd>
+    </dl>
+  `;
+  // Insert the card before the bubble so it appears above the agent's text.
+  agentMsg.msg.insertBefore(card, agentMsg.bubble);
+  scrollToBottom();
+}
+
 function appendDeltaText(agentMsg, text) {
   agentMsg.textBuffer += text;
   agentMsg.bubble.innerHTML = formatMarkdownish(agentMsg.textBuffer);
@@ -205,12 +250,13 @@ function finalizeAgentMessage(agentMsg, errorMsg, isError) {
   scrollToBottom();
 }
 
-function addCostFooter(agentMsg, costUsd, toolCallCount, truncated) {
+function addCostFooter(agentMsg, costUsd, toolCallCount, truncated, escalated) {
   const footer = document.createElement("div");
   footer.className = "cost-footer";
   const costStr = costUsd < 0.01 ? `${(costUsd * 100).toFixed(2)}¢` : `$${costUsd.toFixed(4)}`;
   const tools = toolCallCount === 1 ? "1 tool call" : `${toolCallCount} tool calls`;
   let txt = `${tools} · ${costStr}`;
+  if (escalated) txt += " · escalated";
   if (truncated) txt += " · ⚠ truncated (10-call cap)";
   footer.textContent = txt;
   agentMsg.msg.appendChild(footer);

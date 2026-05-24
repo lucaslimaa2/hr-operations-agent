@@ -192,7 +192,7 @@ Cross-cutting threads (run alongside phases):
 
 ---
 
-## Phase 6 — Conflict resolver + auto vs escalate ⏳
+## Phase 6 — Conflict resolver + auto vs escalate ✅
 
 **Goal:** The headline multi-agent piece. When multiple servers fire, reconcile their outputs and decide: auto-execute, or escalate with a structured brief.
 

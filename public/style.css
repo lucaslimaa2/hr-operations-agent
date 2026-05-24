@@ -355,6 +355,87 @@ header h1 {
   color: var(--accent);
 }
 
+/* -------- Resolver chip (write-tool gating in progress) -------- */
+.tool-pill.resolver {
+  background: rgba(146, 64, 14, 0.06);
+  color: #92400e;
+  border: 1px dashed rgba(146, 64, 14, 0.25);
+}
+.tool-pill.resolver .dot {
+  background: #92400e;
+}
+
+/* -------- Escalation card -------- */
+.escalation-card {
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 10px;
+  padding: 14px 16px 12px;
+  background: #fafafa;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.escalation-card.risk-low    { border-left-color: #6b7280; }
+.escalation-card.risk-medium { border-left-color: #d97706; background: #fffbeb; }
+.escalation-card.risk-high   { border-left-color: var(--error); background: rgba(176, 0, 32, 0.04); }
+
+.escalation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.escalation-badge {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.escalation-risk {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.escalation-risk.risk-low    { background: rgba(107, 114, 128, 0.12); color: #4b5563; }
+.escalation-risk.risk-medium { background: rgba(217, 119, 6, 0.12);  color: #92400e; }
+.escalation-risk.risk-high   { background: rgba(176, 0, 32, 0.10);   color: var(--error); }
+
+.escalation-action {
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.escalation-fields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 6px 14px;
+}
+.escalation-fields dt {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  padding-top: 2px;
+}
+.escalation-fields dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
 /* -------- Error -------- */
 .error {
   color: var(--error);

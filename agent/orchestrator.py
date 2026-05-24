@@ -55,6 +55,7 @@ from pydantic import BaseModel
 
 from agent.audit import log_request
 from agent.classifier import ClassificationResponse, classify
+from agent.conflict_resolver import ResolveContext, resolve
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
@@ -75,6 +76,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # MCP server registry. agent_name → how to launch.
 # Add hris (Phase 4) and policy (Phase 5) here; orchestrator code does not change.
+# Write tools — these mutate state and must be gated by the conflict resolver
+# before they execute. Read-only tools pass through. When adding a new write
+# tool (Phase 4+ HRIS, future PIP / comp / etc.), add it here.
+WRITE_TOOLS: frozenset[str] = frozenset({"update_employment_status"})
+
+
 MCP_SERVERS: dict[str, StdioServerParameters] = {
     "jurisdiction": StdioServerParameters(
         command=sys.executable,
@@ -133,6 +140,9 @@ class OrchestratorResponse(BaseModel):
     cost_usd: float
     tool_call_count: int
     truncated: bool
+    # Populated only when escalated=True. Structured brief from the conflict resolver.
+    escalation_brief: dict[str, Any] | None = None
+    escalation_action_summary: str | None = None
 
 
 # =============================================================================
@@ -194,6 +204,10 @@ async def run_stream(
     truncated = False
     tool_iteration = 0
     available_agents: list[str] = []
+    escalated = False
+    # 'auto' is the default outcome; the conflict resolver may flip this to
+    # 'escalate' if a write tool is gated. 'truncated' is set when the 10-call cap fires.
+    resolution = "auto"
 
     try:
         # ---------- 1. Classify ----------
@@ -298,6 +312,86 @@ async def run_stream(
                             "args": tool_args,
                         }
 
+                        # ---- Write-tool gating via conflict resolver ----
+                        # Read tools pass through. Writes go through the resolver
+                        # FIRST. If the resolver escalates, we never call the MCP
+                        # tool; we synthesize a tool_result that carries the brief.
+                        if tool_name in WRITE_TOOLS:
+                            yield {"type": "resolver_check", "tool": tool_name}
+                            verdict = resolve(
+                                ResolveContext(
+                                    user_input=user_input,
+                                    agents_invoked=available_agents,
+                                    tool_calls=tool_calls_log,
+                                    proposed_tool=tool_name,
+                                    proposed_args=tool_args,
+                                )
+                            )
+                            total_cost += verdict.cost_usd
+
+                            if verdict.result.resolution == "escalate":
+                                escalated = True
+                                resolution = "escalate"
+                                brief = verdict.result.escalation_brief
+                                brief_dump = (
+                                    brief.model_dump() if brief is not None else {}
+                                )
+                                # Emit a structured escalation event so the UI can
+                                # render it as a card alongside the chat text.
+                                yield {
+                                    "type": "escalation",
+                                    "action_summary": verdict.result.action_summary,
+                                    "brief": brief_dump,
+                                }
+                                # Synthetic tool_result Sonnet sees — tells it the
+                                # write was blocked and asks it to summarize for the user.
+                                result_content = json.dumps(
+                                    {
+                                        "executed": False,
+                                        "gated_by": "conflict_resolver",
+                                        "action_summary": verdict.result.action_summary,
+                                        "escalation_brief": brief_dump,
+                                        "instruction": (
+                                            "Do NOT retry this write. Acknowledge the "
+                                            "escalation to the user in 1-2 sentences and "
+                                            "tell them the structured brief has been "
+                                            "prepared for HR. Do not invent additional "
+                                            "details — the UI will render the brief."
+                                        ),
+                                    }
+                                )
+                                is_error = False
+                                tool_calls_log.append(
+                                    {
+                                        "tool": tool_name,
+                                        "args": tool_args,
+                                        "result": result_content,
+                                        "is_error": False,
+                                        "gated": "escalate",
+                                    }
+                                )
+                                yield {
+                                    "type": "tool_result",
+                                    "id": tool_id,
+                                    "tool": tool_name,
+                                    "is_error": False,
+                                    "result": result_content,
+                                }
+                                tool_result_blocks.append(
+                                    {
+                                        "type": "tool_result",
+                                        "tool_use_id": tool_id,
+                                        "content": result_content,
+                                        "is_error": False,
+                                    }
+                                )
+                                # Stop processing further tool_use blocks in this turn.
+                                # We've decided to escalate; subsequent writes would be
+                                # ambiguous. Sonnet will write a closing message.
+                                continue
+
+                            # Resolution = 'auto' → fall through to normal execution.
+
                         session = tool_to_session.get(tool_name)
                         if session is None:
                             result_content = json.dumps(
@@ -393,13 +487,17 @@ async def run_stream(
         return
 
     # ---------- 4. Audit log + done event ----------
+    # Resolution precedence: escalate > truncated > auto.
+    final_resolution = (
+        "escalate" if escalated else ("truncated" if truncated else resolution)
+    )
     log_request(
         session_id=session_id,
         user_input=user_input,
         agents_invoked=available_agents,
         tool_calls=tool_calls_log,
-        resolution="auto" if not truncated else "truncated",
-        escalated=False,
+        resolution=final_resolution,
+        escalated=escalated,
         cost_usd=total_cost,
     )
 
@@ -410,7 +508,7 @@ async def run_stream(
         "cost_usd": round(total_cost, 6),
         "tool_call_count": tool_iteration,
         "truncated": truncated,
-        "escalated": False,
+        "escalated": escalated,
     }
 
 
@@ -435,6 +533,8 @@ async def run(
     tool_count = 0
     truncated = False
     escalated = False
+    escalation_brief: dict[str, Any] | None = None
+    escalation_action_summary: str | None = None
 
     pending_tool_calls: dict[str, dict[str, Any]] = {}
 
@@ -452,6 +552,9 @@ async def run(
             entry["result"] = event["result"]
             entry["is_error"] = event["is_error"]
             tool_calls.append(entry)
+        elif etype == "escalation":
+            escalation_brief = event.get("brief")
+            escalation_action_summary = event.get("action_summary")
         elif etype == "done":
             resolved_session_id = event["session_id"]
             agents_invoked = event["agents_invoked"]
@@ -471,6 +574,8 @@ async def run(
         cost_usd=cost_usd,
         tool_call_count=tool_count,
         truncated=truncated,
+        escalation_brief=escalation_brief,
+        escalation_action_summary=escalation_action_summary,
     )
 
 
