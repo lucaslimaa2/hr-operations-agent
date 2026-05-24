@@ -1,6 +1,17 @@
 """
 Orchestrator — Sonnet-based agent loop with MCP client.
 
+Two public entry points:
+
+  - run_stream(user_input, session_id) -> AsyncGenerator[dict, None]
+        Yields events as they happen: classifier decision, tool_use,
+        tool_result, text_delta (streamed Sonnet tokens), and finally done.
+        Used by /api/chat/stream for SSE.
+
+  - run(user_input, session_id) -> OrchestratorResponse
+        Thin wrapper that consumes run_stream() and aggregates into a single
+        final response. Used by CLI and /api/chat (non-streaming).
+
 Pipeline per request:
 
     classifier (Haiku, fast routing)
@@ -9,7 +20,7 @@ Pipeline per request:
         ↓ connect to MCP servers for agents_required
         ↓ aggregate tools across servers
         ↓ Sonnet tool-call loop (capped at MAX_TOOL_CALLS)
-        ↓ final text response
+        ↓ stream tokens + tool events to caller
     audit_log writer (Supabase)
         ↓ session_id, user_input, agents_invoked, tool_calls, cost_usd
 
@@ -20,14 +31,9 @@ Design notes:
   - Hard cap MAX_TOOL_CALLS=10 per CLAUDE.md. Bounds worst-case cost and
     prevents runaway loops.
   - System prompt instructs Sonnet to ALWAYS use tools for jurisdiction
-    questions — never reason from training data. This enforces the
-    deterministic-compliance principle from the LLM side; the rules engine
-    enforces it from the data side.
-  - Cost tracked per Anthropic call (input/output/cache tokens) and summed
-    into the per-request total alongside classifier cost.
-
-Public API:
-    async run(user_input: str, session_id: str | None = None) -> OrchestratorResponse
+    questions — never reason from training data.
+  - Audit log is written once per request, inside run_stream(), right before
+    the final 'done' event. run() does not log separately (would double-log).
 """
 
 from __future__ import annotations
@@ -36,11 +42,12 @@ import json
 import os
 import sys
 import uuid
+from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -58,17 +65,13 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 ORCHESTRATOR_MODEL = "claude-sonnet-4-5-20250929"
 ORCHESTRATOR_MAX_TOKENS = 2048
-MAX_TOOL_CALLS = 10  # Hard cap per CLAUDE.md — prevents runaway loops.
+MAX_TOOL_CALLS = 10  # Hard cap per CLAUDE.md.
 
 # Sonnet 4.5 pricing (per 1M tokens, as of 2026-05).
 SONNET_INPUT_PER_MTOK = 3.00
 SONNET_OUTPUT_PER_MTOK = 15.00
 
-
-# Project root — used when launching MCP servers as subprocesses so they
-# find their own imports.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
 
 # MCP server registry. agent_name → how to launch.
 # Add hris (Phase 4) and policy (Phase 5) here; orchestrator code does not change.
@@ -107,21 +110,21 @@ days" or "obtain Aufsichtsbehörde consent")."""
 
 
 # =============================================================================
-# Response shape
+# Response shape (for run() wrapper)
 # =============================================================================
 
 
 class OrchestratorResponse(BaseModel):
-    """End-to-end result of one request."""
+    """End-to-end result of one request — produced by run() after consuming run_stream()."""
 
     session_id: str
     final_text: str
     agents_invoked: list[str]
-    tool_calls: list[dict[str, Any]]  # full log: [{tool, args, result}]
-    escalated: bool  # always False in Phase 3 — conflict resolver lands in Phase 6
-    cost_usd: float  # classifier + orchestrator combined
+    tool_calls: list[dict[str, Any]]
+    escalated: bool
+    cost_usd: float
     tool_call_count: int
-    truncated: bool  # True if 10-call cap hit before end_turn
+    truncated: bool
 
 
 # =============================================================================
@@ -136,11 +139,7 @@ def _compute_sonnet_cost(input_tokens: int, output_tokens: int) -> float:
 
 
 def _mcp_tools_to_anthropic(mcp_tools: list[Any]) -> list[dict[str, Any]]:
-    """Convert MCP tool definitions to Anthropic's tool format.
-
-    MCP gives us: {name, description, inputSchema}
-    Anthropic wants: {name, description, input_schema}
-    """
+    """Convert MCP tool definitions to Anthropic's tool format."""
     return [
         {
             "name": t.name,
@@ -151,23 +150,264 @@ def _mcp_tools_to_anthropic(mcp_tools: list[Any]) -> list[dict[str, Any]]:
     ]
 
 
-def _extract_final_text(content: list[Any]) -> str:
-    """Pull the assistant's text out of an Anthropic response.content list."""
-    return "".join(block.text for block in content if block.type == "text").strip()
+_anthropic_client: AsyncAnthropic | None = None
 
 
-_anthropic_client: Anthropic | None = None
-
-
-def _get_anthropic() -> Anthropic:
+def _get_anthropic() -> AsyncAnthropic:
     global _anthropic_client
     if _anthropic_client is None:
-        _anthropic_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        _anthropic_client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     return _anthropic_client
 
 
 # =============================================================================
-# Main entry point
+# Main entry point — streaming generator
+# =============================================================================
+
+
+async def run_stream(
+    user_input: str,
+    session_id: str | None = None,
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Process one HR request, yielding events as they occur.
+
+    Event shapes:
+      {"type": "classifier", "agents_required": [...], "complexity": "...", "entities": {...}}
+      {"type": "tool_use", "id": "...", "tool": "...", "args": {...}}
+      {"type": "tool_result", "id": "...", "tool": "...", "is_error": bool, "result": "..."}
+      {"type": "text_delta", "text": "..."}
+      {"type": "done", "session_id": "...", "agents_invoked": [...], "cost_usd": float,
+       "tool_call_count": int, "truncated": bool, "escalated": False}
+      {"type": "error", "message": "..."}  (terminal — followed by no further events)
+    """
+    session_id = session_id or str(uuid.uuid4())
+    tool_calls_log: list[dict[str, Any]] = []
+    total_cost = 0.0
+    truncated = False
+    tool_iteration = 0
+    available_agents: list[str] = []
+
+    try:
+        # ---------- 1. Classify ----------
+        classification: ClassificationResponse = classify(user_input)
+        total_cost += classification.cost_usd
+        agents_required = classification.result.agents_required
+
+        # Filter to what we have configured.
+        available_agents = [a for a in agents_required if a in MCP_SERVERS]
+        missing_agents = [a for a in agents_required if a not in MCP_SERVERS]
+
+        yield {
+            "type": "classifier",
+            "agents_required": agents_required,
+            "agents_available": available_agents,
+            "agents_missing": missing_agents,
+            "complexity": classification.result.complexity,
+            "entities": classification.result.entities.model_dump(),
+        }
+
+        # ---------- 2. Connect to MCP servers + aggregate tools ----------
+        async with AsyncExitStack() as stack:
+            sessions: dict[str, ClientSession] = {}
+            for agent_name in available_agents:
+                params = MCP_SERVERS[agent_name]
+                read, write = await stack.enter_async_context(stdio_client(params))
+                session = await stack.enter_async_context(ClientSession(read, write))
+                await session.initialize()
+                sessions[agent_name] = session
+
+            anthropic_tools: list[dict[str, Any]] = []
+            tool_to_session: dict[str, ClientSession] = {}
+            for agent_name, session in sessions.items():
+                tools_response = await session.list_tools()
+                anthropic_tools.extend(_mcp_tools_to_anthropic(tools_response.tools))
+                for t in tools_response.tools:
+                    tool_to_session[t.name] = session
+
+            # ---------- 3. Tool-call loop ----------
+            client = _get_anthropic()
+            messages: list[dict[str, Any]] = [
+                {"role": "user", "content": user_input}
+            ]
+            system_prompt = SYSTEM_PROMPT
+            if missing_agents:
+                system_prompt += (
+                    f"\n\nNOTE: The classifier requested these agents, but they are "
+                    f"not yet available in this phase: {missing_agents}. "
+                    f"Answer what you can with the tools you have, and explicitly "
+                    f"acknowledge what you cannot do."
+                )
+
+            while True:
+                # Stream this Sonnet turn — yield text_delta events as tokens arrive.
+                kwargs: dict[str, Any] = {
+                    "model": ORCHESTRATOR_MODEL,
+                    "max_tokens": ORCHESTRATOR_MAX_TOKENS,
+                    "system": system_prompt,
+                    "messages": messages,
+                }
+                if anthropic_tools:
+                    kwargs["tools"] = anthropic_tools
+
+                async with client.messages.stream(**kwargs) as stream:
+                    async for event in stream:
+                        if (
+                            event.type == "content_block_delta"
+                            and event.delta.type == "text_delta"
+                        ):
+                            yield {"type": "text_delta", "text": event.delta.text}
+                    final_message = await stream.get_final_message()
+
+                total_cost += _compute_sonnet_cost(
+                    final_message.usage.input_tokens,
+                    final_message.usage.output_tokens,
+                )
+
+                if final_message.stop_reason == "end_turn":
+                    break
+
+                if final_message.stop_reason == "tool_use":
+                    # Append assistant turn with full content (must include tool_use blocks).
+                    messages.append(
+                        {"role": "assistant", "content": final_message.content}
+                    )
+
+                    tool_result_blocks = []
+                    hit_cap = False
+                    for block in final_message.content:
+                        if block.type != "tool_use":
+                            continue
+
+                        tool_iteration += 1
+                        tool_name = block.name
+                        tool_args = block.input
+                        tool_id = block.id
+
+                        yield {
+                            "type": "tool_use",
+                            "id": tool_id,
+                            "tool": tool_name,
+                            "args": tool_args,
+                        }
+
+                        session = tool_to_session.get(tool_name)
+                        if session is None:
+                            result_content = json.dumps(
+                                {"error": f"Tool {tool_name} not available in this phase."}
+                            )
+                            is_error = True
+                        else:
+                            try:
+                                result = await session.call_tool(tool_name, tool_args)
+                                result_content = "".join(
+                                    c.text for c in result.content if hasattr(c, "text")
+                                )
+                                is_error = bool(result.isError)
+                            except Exception as e:  # noqa: BLE001
+                                result_content = json.dumps(
+                                    {"error": f"{type(e).__name__}: {e}"}
+                                )
+                                is_error = True
+
+                        tool_calls_log.append(
+                            {
+                                "tool": tool_name,
+                                "args": tool_args,
+                                "result": result_content,
+                                "is_error": is_error,
+                            }
+                        )
+
+                        yield {
+                            "type": "tool_result",
+                            "id": tool_id,
+                            "tool": tool_name,
+                            "is_error": is_error,
+                            "result": result_content,
+                        }
+
+                        tool_result_blocks.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": tool_id,
+                                "content": result_content,
+                                "is_error": is_error,
+                            }
+                        )
+
+                        if tool_iteration >= MAX_TOOL_CALLS:
+                            hit_cap = True
+                            break
+
+                    messages.append({"role": "user", "content": tool_result_blocks})
+
+                    if hit_cap:
+                        truncated = True
+                        # Force a final non-tool synthesis turn.
+                        async with client.messages.stream(
+                            model=ORCHESTRATOR_MODEL,
+                            max_tokens=ORCHESTRATOR_MAX_TOKENS,
+                            system=system_prompt
+                            + "\n\nYou have reached the tool-call limit. Synthesize a final answer with the information you have.",
+                            messages=messages,
+                        ) as final_stream:
+                            async for event in final_stream:
+                                if (
+                                    event.type == "content_block_delta"
+                                    and event.delta.type == "text_delta"
+                                ):
+                                    yield {"type": "text_delta", "text": event.delta.text}
+                            final_synth = await final_stream.get_final_message()
+                        total_cost += _compute_sonnet_cost(
+                            final_synth.usage.input_tokens,
+                            final_synth.usage.output_tokens,
+                        )
+                        break
+
+                    # otherwise: continue the loop, another tool call cycle
+                    continue
+
+                # Unexpected stop_reason — bail.
+                break
+
+    except Exception as e:  # noqa: BLE001
+        yield {"type": "error", "message": f"{type(e).__name__}: {e}"}
+        # Still try to log the request as failed, then return.
+        log_request(
+            session_id=session_id,
+            user_input=user_input,
+            agents_invoked=available_agents,
+            tool_calls=tool_calls_log,
+            resolution="error",
+            escalated=False,
+            cost_usd=total_cost,
+        )
+        return
+
+    # ---------- 4. Audit log + done event ----------
+    log_request(
+        session_id=session_id,
+        user_input=user_input,
+        agents_invoked=available_agents,
+        tool_calls=tool_calls_log,
+        resolution="auto" if not truncated else "truncated",
+        escalated=False,
+        cost_usd=total_cost,
+    )
+
+    yield {
+        "type": "done",
+        "session_id": session_id,
+        "agents_invoked": available_agents,
+        "cost_usd": round(total_cost, 6),
+        "tool_call_count": tool_iteration,
+        "truncated": truncated,
+        "escalated": False,
+    }
+
+
+# =============================================================================
+# Non-streaming wrapper
 # =============================================================================
 
 
@@ -175,194 +415,53 @@ async def run(
     user_input: str,
     session_id: str | None = None,
 ) -> OrchestratorResponse:
-    """Process one HR request end-to-end.
+    """Non-streaming variant. Consumes run_stream() and aggregates into one response.
 
-    Steps:
-      1. Classify with Haiku → routing decision.
-      2. Connect to the MCP servers in agents_required (that we have configured).
-      3. Aggregate tools across servers.
-      4. Sonnet tool-call loop (capped at MAX_TOOL_CALLS).
-      5. Write audit_log row.
-      6. Return OrchestratorResponse.
+    Used by the CLI and the non-streaming /api/chat endpoint.
     """
-    session_id = session_id or str(uuid.uuid4())
-
-    # ---------- 1. Classify ----------
-    classification: ClassificationResponse = classify(user_input)
-    agents_required = classification.result.agents_required
-
-    # Phase 3: only jurisdiction server exists. Filter to what we have configured.
-    available_agents = [a for a in agents_required if a in MCP_SERVERS]
-    missing_agents = [a for a in agents_required if a not in MCP_SERVERS]
-
-    # ---------- 2. Connect to MCP servers + aggregate tools ----------
-    tool_calls_log: list[dict[str, Any]] = []
-    total_cost = classification.cost_usd
+    final_text_parts: list[str] = []
+    agents_invoked: list[str] = []
+    tool_calls: list[dict[str, Any]] = []
+    cost_usd = 0.0
+    resolved_session_id = session_id or ""
+    tool_count = 0
     truncated = False
+    escalated = False
 
-    async with AsyncExitStack() as stack:
-        sessions: dict[str, ClientSession] = {}
-        for agent_name in available_agents:
-            params = MCP_SERVERS[agent_name]
-            read, write = await stack.enter_async_context(stdio_client(params))
-            session = await stack.enter_async_context(ClientSession(read, write))
-            await session.initialize()
-            sessions[agent_name] = session
+    pending_tool_calls: dict[str, dict[str, Any]] = {}
 
-        # Aggregate tools + map each tool name → owning session
-        anthropic_tools: list[dict[str, Any]] = []
-        tool_to_session: dict[str, ClientSession] = {}
-        for agent_name, session in sessions.items():
-            tools_response = await session.list_tools()
-            anthropic_tools.extend(_mcp_tools_to_anthropic(tools_response.tools))
-            for t in tools_response.tools:
-                tool_to_session[t.name] = session
-
-        # ---------- 3. Tool-call loop ----------
-        client = _get_anthropic()
-        messages: list[dict[str, Any]] = [
-            {"role": "user", "content": user_input}
-        ]
-        # Inform Sonnet which agents the classifier said are missing, so it can
-        # be honest with the user (e.g., "I can't look up that employee yet —
-        # HRIS isn't connected in this phase").
-        system_prompt = SYSTEM_PROMPT
-        if missing_agents:
-            system_prompt += (
-                f"\n\nNOTE: The classifier requested these agents, but they are "
-                f"not yet available in this phase: {missing_agents}. "
-                f"Answer what you can with the tools you have, and explicitly "
-                f"acknowledge what you cannot do (e.g., 'I can't look up the "
-                f"specific employee record yet — HRIS will be available in a later phase')."
-            )
-
-        tool_iteration = 0
-        final_text = ""
-
-        while tool_iteration < MAX_TOOL_CALLS:
-            response = client.messages.create(
-                model=ORCHESTRATOR_MODEL,
-                max_tokens=ORCHESTRATOR_MAX_TOKENS,
-                system=system_prompt,
-                tools=anthropic_tools if anthropic_tools else None,
-                messages=messages,
-            )
-
-            total_cost += _compute_sonnet_cost(
-                response.usage.input_tokens, response.usage.output_tokens
-            )
-
-            if response.stop_reason == "end_turn":
-                final_text = _extract_final_text(response.content)
-                break
-
-            if response.stop_reason == "tool_use":
-                # Append assistant turn (must include the tool_use blocks)
-                messages.append({"role": "assistant", "content": response.content})
-
-                # Execute each tool_use block
-                tool_result_blocks = []
-                for block in response.content:
-                    if block.type != "tool_use":
-                        continue
-
-                    tool_iteration += 1
-                    tool_name = block.name
-                    tool_args = block.input
-
-                    session = tool_to_session.get(tool_name)
-                    if session is None:
-                        result_content = json.dumps(
-                            {"error": f"Tool {tool_name} not available in this phase."}
-                        )
-                        is_error = True
-                    else:
-                        try:
-                            result = await session.call_tool(tool_name, tool_args)
-                            # MCP returns content blocks; serialize them.
-                            result_content = "".join(
-                                c.text for c in result.content if hasattr(c, "text")
-                            )
-                            is_error = bool(result.isError)
-                        except Exception as e:  # noqa: BLE001
-                            result_content = json.dumps(
-                                {"error": f"{type(e).__name__}: {e}"}
-                            )
-                            is_error = True
-
-                    tool_calls_log.append(
-                        {
-                            "tool": tool_name,
-                            "args": tool_args,
-                            "result": result_content,
-                            "is_error": is_error,
-                        }
-                    )
-
-                    tool_result_blocks.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": result_content,
-                            "is_error": is_error,
-                        }
-                    )
-
-                    if tool_iteration >= MAX_TOOL_CALLS:
-                        break
-
-                messages.append({"role": "user", "content": tool_result_blocks})
-
-                if tool_iteration >= MAX_TOOL_CALLS:
-                    truncated = True
-                    # Force a final synthesis turn without tools
-                    final_response = client.messages.create(
-                        model=ORCHESTRATOR_MODEL,
-                        max_tokens=ORCHESTRATOR_MAX_TOKENS,
-                        system=system_prompt
-                        + "\n\nYou have reached the tool-call limit. Synthesize a final answer with the information you have.",
-                        messages=messages,
-                    )
-                    total_cost += _compute_sonnet_cost(
-                        final_response.usage.input_tokens,
-                        final_response.usage.output_tokens,
-                    )
-                    final_text = _extract_final_text(final_response.content)
-                    break
-
-                # Continue loop — more tool calls expected
-                continue
-
-            # Unexpected stop_reason — bail with what we have.
-            final_text = _extract_final_text(response.content) or (
-                f"[orchestrator] Unexpected stop_reason: {response.stop_reason}"
-            )
-            break
-        else:
-            # While-loop exited without break (shouldn't happen given the
-            # truncation path above, but defense-in-depth)
-            truncated = True
-            final_text = final_text or "[orchestrator] Tool-call loop exhausted."
-
-    # ---------- 4. Audit log ----------
-    log_request(
-        session_id=session_id,
-        user_input=user_input,
-        agents_invoked=available_agents,
-        tool_calls=tool_calls_log,
-        resolution="auto" if not truncated else "truncated",
-        escalated=False,  # Phase 6: conflict resolver may set this True
-        cost_usd=total_cost,
-    )
+    async for event in run_stream(user_input, session_id):
+        etype = event.get("type")
+        if etype == "text_delta":
+            final_text_parts.append(event["text"])
+        elif etype == "tool_use":
+            pending_tool_calls[event["id"]] = {
+                "tool": event["tool"],
+                "args": event["args"],
+            }
+        elif etype == "tool_result":
+            entry = pending_tool_calls.pop(event["id"], {"tool": event["tool"], "args": {}})
+            entry["result"] = event["result"]
+            entry["is_error"] = event["is_error"]
+            tool_calls.append(entry)
+        elif etype == "done":
+            resolved_session_id = event["session_id"]
+            agents_invoked = event["agents_invoked"]
+            cost_usd = event["cost_usd"]
+            tool_count = event["tool_call_count"]
+            truncated = event["truncated"]
+            escalated = event["escalated"]
+        elif etype == "error":
+            final_text_parts.append(f"\n\n[error] {event['message']}")
 
     return OrchestratorResponse(
-        session_id=session_id,
-        final_text=final_text,
-        agents_invoked=available_agents,
-        tool_calls=tool_calls_log,
-        escalated=False,
-        cost_usd=total_cost,
-        tool_call_count=tool_iteration,
+        session_id=resolved_session_id,
+        final_text="".join(final_text_parts).strip(),
+        agents_invoked=agents_invoked,
+        tool_calls=tool_calls,
+        escalated=escalated,
+        cost_usd=cost_usd,
+        tool_call_count=tool_count,
         truncated=truncated,
     )
 
@@ -384,14 +483,33 @@ if __name__ == "__main__":
     )
 
     print(f"USER: {query}\n")
-    resp = asyncio.run(run(query))
-    print(f"AGENT: {resp.final_text}\n")
-    print("---")
-    print(f"agents_invoked:  {resp.agents_invoked}")
-    print(f"tool_call_count: {resp.tool_call_count}")
-    print(f"cost_usd:        ${resp.cost_usd:.5f}")
-    print(f"truncated:       {resp.truncated}")
-    if resp.tool_calls:
-        print(f"\ntool_calls:")
-        for tc in resp.tool_calls:
-            print(f"  - {tc['tool']}({json.dumps(tc['args'], ensure_ascii=False)})")
+
+    async def _main() -> None:
+        # Stream events live to stdout so the CLI shows what the SSE endpoint will.
+        print("AGENT: ", end="", flush=True)
+        meta: dict[str, Any] = {}
+        async for event in run_stream(query):
+            if event["type"] == "text_delta":
+                print(event["text"], end="", flush=True)
+            elif event["type"] == "tool_use":
+                print(
+                    f"\n[tool] → {event['tool']}({json.dumps(event['args'], ensure_ascii=False)})",
+                    flush=True,
+                )
+                print("AGENT: ", end="", flush=True)
+            elif event["type"] == "tool_result":
+                # Brief — full result is too noisy for CLI.
+                pass
+            elif event["type"] == "done":
+                meta = event
+            elif event["type"] == "error":
+                print(f"\n[error] {event['message']}", flush=True)
+
+        print("\n\n---")
+        print(f"session_id:      {meta.get('session_id')}")
+        print(f"agents_invoked:  {meta.get('agents_invoked')}")
+        print(f"tool_call_count: {meta.get('tool_call_count')}")
+        print(f"cost_usd:        ${meta.get('cost_usd', 0):.5f}")
+        print(f"truncated:       {meta.get('truncated')}")
+
+    asyncio.run(_main())
