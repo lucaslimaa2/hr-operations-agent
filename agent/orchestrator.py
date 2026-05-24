@@ -86,7 +86,11 @@ MCP_SERVERS: dict[str, StdioServerParameters] = {
         args=["-m", "mcp_servers.hris_server"],
         cwd=str(PROJECT_ROOT),
     ),
-    # "policy": StdioServerParameters(...) # Phase 5
+    "policy": StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "mcp_servers.policy_server"],
+        cwd=str(PROJECT_ROOT),
+    ),
 }
 
 

@@ -109,13 +109,13 @@ Cross-cutting threads (run alongside phases):
     - Static `public/` mount at root for local dev (one port serves both API + UI)
     - Refactor of orchestrator: `run_stream()` is the primary async generator; `run()` becomes a thin consumer of the stream (single source of truth, no divergence risk)
 
-- 🔨 **3d — Chat UI** (`public/index.html` + `style.css` + `app.js`)
+- ✅ 🔨 **3d — Chat UI** (`public/index.html` + `style.css` + `app.js`)
     - Matches `growth-ai-agent` portfolio aesthetic (Inter + Playfair Display, white bg, dark bubbles, rounded chat card)
     - 4 suggestion chips pre-loaded with demo prompts
     - Streams events live: agent pills, tool pills with running/done/error state + duration, ChatGPT-style cursor while text streams in, per-message cost footer
     - Pending: commit + final styling polish (Phase 7 also iterates on this)
 
-- ⏳ **3e — `vercel.json` + first deploy**
+- ✅ ⏳ **3e — `vercel.json` + first deploy**
     - `vercel.json` routes `/api/*` → Python serverless function, everything else → static `public/`
     - `vercel link` + `vercel --prod`
     - Set env vars in Vercel dashboard (mirror `.env`)
@@ -158,24 +158,32 @@ Cross-cutting threads (run alongside phases):
 
 ---
 
-## Phase 5 — Policy RAG server ⏳
+## Phase 5 — Policy RAG server ✅
 
 **Goal:** Agent can answer policy/process questions ("what's our offboarding process?"). Vector search over a real policy corpus.
 
 **Tasks:**
-- ⏳ Draft 5 policy markdown documents in `docs/policies/` (I write these; user reviews):
-    - `offboarding-policy.md`
-    - `job-change-approval-matrix.md`
-    - `contractor-to-fte-conversion.md`
-    - `compensation-bands.md`
-    - `performance-improvement-policy.md`
-    - 600–800 words each, realistic HR handbook prose, country-specific callouts for BR/DE/FR
-- ⏳ `scripts/seed_policies.py` — chunk policies along H2 boundaries, embed via OpenAI `text-embedding-3-small`, upsert to Pinecone with metadata `{doc_id, section, country_scope}`
-- ⏳ `mcp_servers/policy_server.py` — FastMCP server with:
-    - `search_policies(query, country, scenario)` — top-5 cosine search, optional country filter
-    - `get_policy(policy_id)` — retrieve chunk by stable ID
-- ⏳ Add `"policy"` to `MCP_SERVERS` registry
-- ⏳ Verify: "What are our offboarding steps?" returns relevant chunks with citations
+- ✅ Drafted 5 policy markdown documents in `docs/policies/` (research agent wrote, ~800-1200 words each):
+    - `offboarding-policy.md` — 10 chunks
+    - `job-change-approval-matrix.md` — 6 chunks (incl. L1–L7 approval table)
+    - `contractor-to-fte-conversion.md` — 8 chunks (incl. BR/DE/FR addenda)
+    - `compensation-bands.md` — 8 chunks (incl. L1–L7 framework + EU Pay Transparency Directive)
+    - `performance-improvement-policy.md` — 9 chunks (incl. FR licenciement procedure + DE Abmahnung)
+    - All five docs reference real statutes (CLT Art. 3º, BGB §622, KSchG, GewO §109, indemnité de licenciement) aligned with `docs/jurisdiction.md`
+- ✅ `scripts/seed_policies.py` — chunks docs at H2 boundaries, sub-splits at H3 boundaries for country addenda (so each country gets its own chunk + scope tag). Embeds via OpenAI `text-embedding-3-small`. Wipes-and-rebuilds the Pinecone index for idempotency. 41 vectors total in the `hr-policies` index.
+- ✅ `mcp_servers/policy_server.py` — FastMCP server with:
+    - `search_policies(query, country, scenario)` — embed query, top-5 cosine search, optional metadata filter (`country_scope IN [global, multi, country]`)
+    - `get_policy(doc_id)` — read full markdown from disk; path-traversal-safe doc_id sanitization
+- ✅ Added `"policy"` to `MCP_SERVERS` registry — one entry, no orchestrator code changes.
+- ✅ Verified end-to-end:
+    - Demo #7 "What are our offboarding steps?" → `[policy]` only → 2 tool calls, $0.044, comprehensive offboarding answer including country addenda
+    - Demo #5 "Convert Maria Santos contractor to CLT" → all 3 servers fired → HRIS lookup, conversion policy retrieval, jurisdiction obligations, vínculo empregatício re-classification risk all integrated. 3 tool calls, $0.072.
+
+**What's defensible after this phase:**
+- "Chunking strategy is structure-aware. H2 boundaries preserve topical coherence; we sub-split at H3 when country-specific addenda appear so each country gets its own embedding + scope tag. Country filter actually filters — searching for FR policy returns FR + global chunks but excludes BR/DE addenda."
+- "Embedding is client-side via OpenAI, not Pinecone integrated inference. Lets us swap the embedding model without migrating the vector store. Tomorrow it could be voyage-3 or text-embedding-3-large — same index."
+- "Seed pipeline is wipe-and-rebuild. Idempotent runs, no orphan chunks when doc structure changes. Safe to re-run after any policy edit."
+- "Three MCP servers, all production-shaped. Demo #5 (contractor conversion) exercises all three in one request — proves the orchestrator handles N-server fan-out cleanly."
 
 **What's defensible after this phase:**
 - "Embedding happens client-side via OpenAI — Pinecone is pure vector storage. Embedding model is swappable without touching the vector store."
