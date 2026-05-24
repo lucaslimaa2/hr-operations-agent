@@ -131,19 +131,25 @@ Cross-cutting threads (run alongside phases):
 
 ---
 
-## Phase 4 — HRIS server + seeded employees ⏳
+## Phase 4 — HRIS server + seeded employees ✅
 
 **Goal:** Agent can resolve employees by name or ID and query their records. First proof that adding a server to the orchestrator is a one-line registry change.
 
 **Tasks:**
-- ⏳ `scripts/seed_data.py` — seed 20 mock employees (CLAUDE.md table) into Supabase `employees` table
-- ⏳ `mcp_servers/hris_server.py` — FastMCP server with four tools:
-    - `get_employee(employee_id)` — full record
-    - `search_employees(name)` — case-insensitive partial match
-    - `get_payroll_calendar(country)` — hardcoded next payroll dates per country
-    - `update_employment_status(employee_id, status, effective_date)` — **write tool**. Writes to `employees` AND `audit_log` BEFORE returning (non-negotiable per CLAUDE.md)
-- ⏳ Add `"hris"` to `MCP_SERVERS` registry in `orchestrator.py` (one-line change)
-- ⏳ Verify demo scenarios that need employee lookup: "Terminate João" (resolves emp_001), "What's Carlos's severance" (emp_011)
+- ✅ `scripts/seed_data.py` — seeded 20 mock employees from CLAUDE.md. Ana Müller's start_date adjusted to ~3 months ago (so demo scenario #3 still demonstrates probation; date-freshness caveat documented in the script header).
+- ✅ `mcp_servers/hris_server.py` — FastMCP server with four tools:
+    - `get_employee(employee_id)` — full record, includes computed `tenure_months`
+    - `search_employees(name)` — case-insensitive partial match via PostgREST `ilike`
+    - `get_payroll_calendar(country)` — hardcoded next payroll cadence for 13 countries
+    - `update_employment_status(employee_id, status, effective_date)` — **WRITE tool**. Writes to `employees` AND `audit_log` BEFORE returning. Two audit rows per write (tool-level + orchestrator-level) for defense-in-depth.
+- ✅ Added `"hris"` to `MCP_SERVERS` registry in `orchestrator.py` — **6 lines of config, no logic changes.** End-to-end verified:
+    - "Terminate Sarah Chen with 2 weeks notice" → orchestrator looks up Sarah via HRIS (tenure 77mo), then validates via jurisdiction → non-compliant (BGB §622(2) Nr. 2 minimum 60 days)
+    - "Terminate Ana Müller with 2 weeks notice" → HRIS lookup (tenure 3mo, probation), then jurisdiction → compliant (BGB §622(3))
+
+**What's defensible after this phase:**
+- "Audit log is enforced at the data layer — write tools log to audit_log before returning, no exceptions. Two audit rows per write: one tool-level (survives even if the orchestrator is bypassed) and one orchestrator-level (request context)."
+- "Adding a new MCP server is a config change. Orchestrator code didn't change between Phase 3 and Phase 4 — just one new entry in the server registry."
+- "HRIS reads happen before any write — the system prompt enforces it, and the demo scenarios prove it."
 
 **What's defensible after this phase:**
 - "Audit log is enforced at the data layer — write tools log before returning, no exceptions"
