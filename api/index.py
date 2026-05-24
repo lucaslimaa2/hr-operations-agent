@@ -20,14 +20,19 @@ Deploy notes:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from agent.orchestrator import OrchestratorResponse, run, run_stream
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PUBLIC_DIR = PROJECT_ROOT / "public"
 
 app = FastAPI(
     title="HR Operations Agent",
@@ -109,3 +114,19 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
             "Connection": "keep-alive",
         },
     )
+
+
+# =============================================================================
+# Static files (UI)
+# =============================================================================
+# Local dev only — on Vercel, files in /public are served as static assets at
+# root paths automatically (Vercel's filesystem routing convention).
+#
+# We replicate Vercel's behavior locally by mounting public/ at root with
+# html=True, so /style.css resolves to public/style.css and / resolves to
+# public/index.html — same paths used both locally and on Vercel.
+#
+# This mount MUST come LAST so /api/* routes take precedence.
+
+if PUBLIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(PUBLIC_DIR), html=True), name="public")
