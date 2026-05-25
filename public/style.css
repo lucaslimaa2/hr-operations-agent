@@ -120,13 +120,32 @@ header h1 {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  min-height: 200px;
+  height: min(60vh, 560px);
+  min-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px; /* breathing room next to scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* Webkit scrollbar polish */
+#history::-webkit-scrollbar {
+  width: 8px;
+}
+#history::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+#history::-webkit-scrollbar-thumb:hover {
+  background: #c8c8d0;
 }
 
 #history:empty::before {
   content: "Your conversation will appear here.";
   color: var(--muted);
   font-style: italic;
+  margin: auto;
 }
 
 .message {

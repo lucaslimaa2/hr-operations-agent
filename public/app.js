@@ -318,7 +318,10 @@ function formatDuration(ms) {
 }
 
 function scrollToBottom() {
-  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  // Scroll the chat container, not the page. With #history capped at 60vh,
+  // the page itself doesn't need to scroll on new messages — only the
+  // conversation panel does.
+  historyEl.scrollTo({ top: historyEl.scrollHeight, behavior: "smooth" });
 }
 
 async function safeText(resp) {
