@@ -66,7 +66,9 @@ The orchestrator intercepts any tool in `WRITE_TOOLS` and routes it through the 
 - The orchestrator writes a per-request audit row capturing the full sequence
 
 **5. MCP boundary, not framework lock-in.**
-Tools live in separate processes communicating over the Model Context Protocol. Each MCP server is a deployable unit: same interface whether the backing data is a Python dict, a Supabase table, or a live Deel API. The agent layer is vendor-agnostic by construction.
+Tools are MCP servers — separate logical units with a defined protocol contract. Each server is a deployable unit: same interface whether the backing data is a Python dict, a Supabase table, or a live Deel API. The agent layer is vendor-agnostic by construction.
+
+**Transport adapts to the runtime.** On long-running hosts (Railway, Fly.io, local dev), MCP servers run as **subprocesses** communicating via stdio — true process isolation. On Vercel's serverless runtime, where subprocess spawning is unreliable across cold starts, the orchestrator detects `VERCEL=1` and switches to an **in-process adapter** that calls the FastMCP tool functions directly via the same `list_tools()` / `call_tool()` contract. Tool names, schemas, arguments, return shapes — all identical. Only the wire changes.
 
 ---
 
