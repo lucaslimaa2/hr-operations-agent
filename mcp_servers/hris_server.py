@@ -26,7 +26,6 @@ The orchestrator launches this as a subprocess via stdio.
 from __future__ import annotations
 
 import os
-import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -53,9 +52,7 @@ def _get_supabase() -> Client:
         url = os.environ.get("SUPABASE_URL")
         key = os.environ.get("SUPABASE_KEY")
         if not url or not key:
-            raise RuntimeError(
-                "SUPABASE_URL or SUPABASE_KEY not set. HRIS server cannot start."
-            )
+            raise RuntimeError("SUPABASE_URL or SUPABASE_KEY not set. HRIS server cannot start.")
         _supabase = create_client(url, key)
     return _supabase
 
@@ -238,11 +235,7 @@ def update_employment_status(
     """
     valid_statuses = {"active", "terminated", "on_leave", "resigned"}
     if status not in valid_statuses:
-        return {
-            "error": (
-                f"Invalid status '{status}'. Must be one of: {sorted(valid_statuses)}."
-            )
-        }
+        return {"error": (f"Invalid status '{status}'. Must be one of: {sorted(valid_statuses)}.")}
 
     effective_date = effective_date or date.today().isoformat()
 
@@ -250,20 +243,13 @@ def update_employment_status(
         client = _get_supabase()
 
         # ---- 1. Read current state (the "before") ----
-        before_resp = (
-            client.table("employees").select("*").eq("id", employee_id).execute()
-        )
+        before_resp = client.table("employees").select("*").eq("id", employee_id).execute()
         if not before_resp.data:
             return {"error": f"Employee {employee_id} not found — cannot update."}
         before = before_resp.data[0]
 
         # ---- 2. Apply the update ----
-        update_resp = (
-            client.table("employees")
-            .update({"employment_status": status})
-            .eq("id", employee_id)
-            .execute()
-        )
+        update_resp = client.table("employees").update({"employment_status": status}).eq("id", employee_id).execute()
         if not update_resp.data:
             return {"error": "Update returned no data — write may have failed."}
         after = update_resp.data[0]
@@ -275,8 +261,7 @@ def update_employment_status(
         audit_row = {
             "session_id": f"write:hris:{employee_id}",
             "user_input": (
-                f"update_employment_status(employee_id={employee_id}, "
-                f"status={status}, effective_date={effective_date})"
+                f"update_employment_status(employee_id={employee_id}, status={status}, effective_date={effective_date})"
             ),
             "agents_invoked": ["hris"],
             "tool_calls": [

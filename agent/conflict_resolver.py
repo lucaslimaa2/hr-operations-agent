@@ -47,6 +47,8 @@ RESOLVER_MAX_TOKENS = 512
 # Haiku 4.5 pricing (matches classifier.py).
 HAIKU_INPUT_PER_MTOK = 1.00
 HAIKU_OUTPUT_PER_MTOK = 5.00
+HAIKU_CACHE_WRITE_PER_MTOK = 1.25
+HAIKU_CACHE_READ_PER_MTOK = 0.10
 
 
 # =============================================================================
@@ -109,9 +111,7 @@ class ResolverResult(BaseModel):
     )
     escalation_brief: EscalationBrief | None = Field(
         default=None,
-        description=(
-            "Required when resolution='escalate'. Omit (null) when resolution='auto'."
-        ),
+        description=("Required when resolution='escalate'. Omit (null) when resolution='auto'."),
     )
 
 
@@ -202,10 +202,18 @@ RESOLVE_TOOL = {
 # =============================================================================
 
 
-def _compute_cost(input_tokens: int, output_tokens: int) -> float:
-    return (input_tokens / 1_000_000) * HAIKU_INPUT_PER_MTOK + (
-        output_tokens / 1_000_000
-    ) * HAIKU_OUTPUT_PER_MTOK
+def _compute_cost(
+    input_tokens: int,
+    output_tokens: int,
+    cache_creation_tokens: int = 0,
+    cache_read_tokens: int = 0,
+) -> float:
+    return (
+        input_tokens * HAIKU_INPUT_PER_MTOK
+        + cache_creation_tokens * HAIKU_CACHE_WRITE_PER_MTOK
+        + cache_read_tokens * HAIKU_CACHE_READ_PER_MTOK
+        + output_tokens * HAIKU_OUTPUT_PER_MTOK
+    ) / 1_000_000
 
 
 # =============================================================================
@@ -263,20 +271,21 @@ def resolve(context: ResolveContext) -> ResolveResponse:
         "Decide: auto or escalate. Call submit_resolution exactly once."
     )
 
+    # Cache breakpoint on the tool — system + tool schema cached as one block.
+    cached_tool = {**RESOLVE_TOOL, "cache_control": {"type": "ephemeral"}}
+
     response = client.messages.create(
         model=RESOLVER_MODEL,
         max_tokens=RESOLVER_MAX_TOKENS,
         system=SYSTEM_PROMPT,
-        tools=[RESOLVE_TOOL],
+        tools=[cached_tool],
         tool_choice={"type": "tool", "name": "submit_resolution"},
         messages=[{"role": "user", "content": user_message}],
     )
 
     tool_blocks = [b for b in response.content if b.type == "tool_use"]
     if not tool_blocks:
-        raise ValueError(
-            f"Resolver did not call submit_resolution. Response: {response.content}"
-        )
+        raise ValueError(f"Resolver did not call submit_resolution. Response: {response.content}")
 
     parsed = ResolverResult.model_validate(tool_blocks[0].input)
 
@@ -293,12 +302,20 @@ def resolve(context: ResolveContext) -> ResolveResponse:
             ),
         )
 
-    cost = _compute_cost(response.usage.input_tokens, response.usage.output_tokens)
+    usage = response.usage
+    cache_creation = getattr(usage, "cache_creation_input_tokens", 0) or 0
+    cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
+    cost = _compute_cost(
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        cache_creation_tokens=cache_creation,
+        cache_read_tokens=cache_read,
+    )
 
     return ResolveResponse(
         result=parsed,
-        input_tokens=response.usage.input_tokens,
-        output_tokens=response.usage.output_tokens,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
         cost_usd=cost,
     )
 
@@ -321,7 +338,7 @@ if __name__ == "__main__":
             {
                 "tool": "search_employees",
                 "args": {"name": "Sarah Chen"},
-                "result": '{"matches": [{"id": "emp_004", "name": "Sarah Chen", "country": "DE", "employment_type": "full-time", "tenure_months": 77, "employment_status": "active"}]}',
+                "result": '{"matches": [{"id": "emp_004", "name": "Sarah Chen", "country": "DE", "employment_type": "full-time", "tenure_months": 77, "employment_status": "active"}]}',  # noqa: E501
             },
             {
                 "tool": "validate_action",
@@ -334,11 +351,15 @@ if __name__ == "__main__":
                         "notice_days_given": 14,
                     },
                 },
-                "result": '{"compliant": false, "reason": "Proposed 14 days notice is BELOW the statutory minimum of 60 days", "citation": "BGB §622(2) Nr. 2"}',
+                "result": '{"compliant": false, "reason": "Proposed 14 days notice is BELOW the statutory minimum of 60 days", "citation": "BGB §622(2) Nr. 2"}',  # noqa: E501
             },
         ],
         proposed_tool="update_employment_status",
-        proposed_args={"employee_id": "emp_004", "status": "terminated", "effective_date": "2026-06-08"},
+        proposed_args={
+            "employee_id": "emp_004",
+            "status": "terminated",
+            "effective_date": "2026-06-08",
+        },
     )
 
     print("Test 1 — Sarah Chen non-compliant termination (should escalate):\n")

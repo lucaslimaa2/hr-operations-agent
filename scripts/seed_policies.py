@@ -281,9 +281,7 @@ def main() -> int:
         sample = [p for p in pending if p["country_scope"] == scope][:1]
         if sample:
             p = sample[0]
-            print(
-                f"  [{scope:6}] {p['id']:50} · '{p['section'][:50]}'"
-            )
+            print(f"  [{scope:6}] {p['id']:50} · '{p['section'][:50]}'")
 
     return 0
 

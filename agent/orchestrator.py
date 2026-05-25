@@ -71,6 +71,8 @@ MAX_TOOL_CALLS = 10  # Hard cap per CLAUDE.md.
 # Sonnet 4.5 pricing (per 1M tokens, as of 2026-05).
 SONNET_INPUT_PER_MTOK = 3.00
 SONNET_OUTPUT_PER_MTOK = 15.00
+SONNET_CACHE_WRITE_PER_MTOK = 3.75  # 1.25× input — first call writes the cache
+SONNET_CACHE_READ_PER_MTOK = 0.30  # 0.10× input — cache hits cost ~10%
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -150,10 +152,18 @@ class OrchestratorResponse(BaseModel):
 # =============================================================================
 
 
-def _compute_sonnet_cost(input_tokens: int, output_tokens: int) -> float:
-    return (input_tokens / 1_000_000) * SONNET_INPUT_PER_MTOK + (
-        output_tokens / 1_000_000
-    ) * SONNET_OUTPUT_PER_MTOK
+def _compute_sonnet_cost(
+    input_tokens: int,
+    output_tokens: int,
+    cache_creation_tokens: int = 0,
+    cache_read_tokens: int = 0,
+) -> float:
+    return (
+        input_tokens * SONNET_INPUT_PER_MTOK
+        + cache_creation_tokens * SONNET_CACHE_WRITE_PER_MTOK
+        + cache_read_tokens * SONNET_CACHE_READ_PER_MTOK
+        + output_tokens * SONNET_OUTPUT_PER_MTOK
+    ) / 1_000_000
 
 
 def _mcp_tools_to_anthropic(mcp_tools: list[Any]) -> list[dict[str, Any]]:
@@ -240,17 +250,27 @@ async def run_stream(
 
             anthropic_tools: list[dict[str, Any]] = []
             tool_to_session: dict[str, ClientSession] = {}
-            for agent_name, session in sessions.items():
+            for session in sessions.values():
                 tools_response = await session.list_tools()
                 anthropic_tools.extend(_mcp_tools_to_anthropic(tools_response.tools))
                 for t in tools_response.tools:
                     tool_to_session[t.name] = session
 
+            # Prompt caching: mark the last tool with cache_control so the
+            # entire (system + tools) block is cached as one unit. Tool
+            # schemas don't change between requests — same MCP servers, same
+            # discovered tools. The user message comes AFTER this cache point
+            # and is not cached. After the first call within the 5-minute
+            # window, cached tokens cost ~10% of normal input price.
+            if anthropic_tools:
+                anthropic_tools[-1] = {
+                    **anthropic_tools[-1],
+                    "cache_control": {"type": "ephemeral"},
+                }
+
             # ---------- 3. Tool-call loop ----------
             client = _get_anthropic()
-            messages: list[dict[str, Any]] = [
-                {"role": "user", "content": user_input}
-            ]
+            messages: list[dict[str, Any]] = [{"role": "user", "content": user_input}]
             system_prompt = SYSTEM_PROMPT
             if missing_agents:
                 system_prompt += (
@@ -273,16 +293,15 @@ async def run_stream(
 
                 async with client.messages.stream(**kwargs) as stream:
                     async for event in stream:
-                        if (
-                            event.type == "content_block_delta"
-                            and event.delta.type == "text_delta"
-                        ):
+                        if event.type == "content_block_delta" and event.delta.type == "text_delta":
                             yield {"type": "text_delta", "text": event.delta.text}
                     final_message = await stream.get_final_message()
 
                 total_cost += _compute_sonnet_cost(
-                    final_message.usage.input_tokens,
-                    final_message.usage.output_tokens,
+                    input_tokens=final_message.usage.input_tokens,
+                    output_tokens=final_message.usage.output_tokens,
+                    cache_creation_tokens=getattr(final_message.usage, "cache_creation_input_tokens", 0) or 0,
+                    cache_read_tokens=getattr(final_message.usage, "cache_read_input_tokens", 0) or 0,
                 )
 
                 if final_message.stop_reason == "end_turn":
@@ -290,9 +309,7 @@ async def run_stream(
 
                 if final_message.stop_reason == "tool_use":
                     # Append assistant turn with full content (must include tool_use blocks).
-                    messages.append(
-                        {"role": "assistant", "content": final_message.content}
-                    )
+                    messages.append({"role": "assistant", "content": final_message.content})
 
                     tool_result_blocks = []
                     hit_cap = False
@@ -333,9 +350,7 @@ async def run_stream(
                                 escalated = True
                                 resolution = "escalate"
                                 brief = verdict.result.escalation_brief
-                                brief_dump = (
-                                    brief.model_dump() if brief is not None else {}
-                                )
+                                brief_dump = brief.model_dump() if brief is not None else {}
                                 # Emit a structured escalation event so the UI can
                                 # render it as a card alongside the chat text.
                                 yield {
@@ -394,21 +409,15 @@ async def run_stream(
 
                         session = tool_to_session.get(tool_name)
                         if session is None:
-                            result_content = json.dumps(
-                                {"error": f"Tool {tool_name} not available in this phase."}
-                            )
+                            result_content = json.dumps({"error": f"Tool {tool_name} not available in this phase."})
                             is_error = True
                         else:
                             try:
                                 result = await session.call_tool(tool_name, tool_args)
-                                result_content = "".join(
-                                    c.text for c in result.content if hasattr(c, "text")
-                                )
+                                result_content = "".join(c.text for c in result.content if hasattr(c, "text"))
                                 is_error = bool(result.isError)
                             except Exception as e:  # noqa: BLE001
-                                result_content = json.dumps(
-                                    {"error": f"{type(e).__name__}: {e}"}
-                                )
+                                result_content = json.dumps({"error": f"{type(e).__name__}: {e}"})
                                 is_error = True
 
                         tool_calls_log.append(
@@ -450,19 +459,19 @@ async def run_stream(
                             model=ORCHESTRATOR_MODEL,
                             max_tokens=ORCHESTRATOR_MAX_TOKENS,
                             system=system_prompt
-                            + "\n\nYou have reached the tool-call limit. Synthesize a final answer with the information you have.",
+                            + "\n\nYou have reached the tool-call limit. "
+                            + "Synthesize a final answer with the information you have.",
                             messages=messages,
                         ) as final_stream:
                             async for event in final_stream:
-                                if (
-                                    event.type == "content_block_delta"
-                                    and event.delta.type == "text_delta"
-                                ):
+                                if event.type == "content_block_delta" and event.delta.type == "text_delta":
                                     yield {"type": "text_delta", "text": event.delta.text}
                             final_synth = await final_stream.get_final_message()
                         total_cost += _compute_sonnet_cost(
-                            final_synth.usage.input_tokens,
-                            final_synth.usage.output_tokens,
+                            input_tokens=final_synth.usage.input_tokens,
+                            output_tokens=final_synth.usage.output_tokens,
+                            cache_creation_tokens=getattr(final_synth.usage, "cache_creation_input_tokens", 0) or 0,
+                            cache_read_tokens=getattr(final_synth.usage, "cache_read_input_tokens", 0) or 0,
                         )
                         break
 
@@ -488,9 +497,7 @@ async def run_stream(
 
     # ---------- 4. Audit log + done event ----------
     # Resolution precedence: escalate > truncated > auto.
-    final_resolution = (
-        "escalate" if escalated else ("truncated" if truncated else resolution)
-    )
+    final_resolution = "escalate" if escalated else ("truncated" if truncated else resolution)
     log_request(
         session_id=session_id,
         user_input=user_input,

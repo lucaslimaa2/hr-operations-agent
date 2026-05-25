@@ -44,10 +44,7 @@ def _get_client() -> Client:
         url = os.environ.get("SUPABASE_URL")
         key = os.environ.get("SUPABASE_KEY")
         if not url or not key:
-            raise RuntimeError(
-                "Supabase credentials missing (SUPABASE_URL / SUPABASE_KEY). "
-                "Cannot write audit log."
-            )
+            raise RuntimeError("Supabase credentials missing (SUPABASE_URL / SUPABASE_KEY). Cannot write audit log.")
         _client = create_client(url, key)
     return _client
 

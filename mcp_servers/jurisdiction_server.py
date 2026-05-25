@@ -404,9 +404,7 @@ def _validate_mass_layoff(country: str, ctx: dict[str, Any]) -> dict[str, Any]:
     if country == "US-CA":
         # Federal WARN: 100+ employees, 50+ affected at single site OR 500+, with 33% threshold
         # for layoffs of 50-499.
-        federal_triggered = total >= 100 and (
-            affected >= 500 or (affected >= 50 and affected / max(total, 1) >= 0.33)
-        )
+        federal_triggered = total >= 100 and (affected >= 500 or (affected >= 50 and affected / max(total, 1) >= 0.33))
         # Cal-WARN: 75+ employees in past 12mo, 50+ affected — no percentage threshold.
         cal_triggered = total >= 75 and affected >= 50
 
@@ -533,8 +531,7 @@ def _validate_terminate_protected(country: str, ctx: dict[str, Any]) -> dict[str
     return {
         "compliant": False,
         "reason": (
-            f"Ordinary termination of an employee in protected category '{p.name}' is BLOCKED. "
-            f"Scope: {p.scope}."
+            f"Ordinary termination of an employee in protected category '{p.name}' is BLOCKED. Scope: {p.scope}."
         ),
         "recommendation": (
             "Do NOT auto-execute. Escalate to HR/legal. Termination of a protected employee "

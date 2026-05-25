@@ -1,5 +1,9 @@
 # HR Operations Agent
 
+[![CI](https://github.com/lucaslimaa2/hr-operations-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/lucaslimaa2/hr-operations-agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+
 A production-shaped multi-agent system that handles HR workflow requests in natural language. Haiku classifies the intent, Sonnet reasons over three MCP servers (HRIS, jurisdiction rules engine, policy RAG), a conflict resolver gates every write, and every action is audit-logged.
 
 Built as part of [Lucas Lima's AI portfolio](https://lucaslima.xyz/ai-portfolio).

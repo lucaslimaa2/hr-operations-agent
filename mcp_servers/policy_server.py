@@ -32,7 +32,6 @@ Run standalone for testing:
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -119,9 +118,7 @@ def search_policies(
         # Build country filter if requested.
         pc_filter: dict[str, Any] | None = None
         if country:
-            pc_filter = {
-                "country_scope": {"$in": ["global", "multi", country]}
-            }
+            pc_filter = {"country_scope": {"$in": ["global", "multi", country]}}
 
         index = _get_pinecone_index()
         result = index.query(

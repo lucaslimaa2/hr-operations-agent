@@ -38,7 +38,6 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 from supabase import create_client  # noqa: E402
 
-
 # -----------------------------------------------------------------------------
 # Date adjustments — keep demo scenarios coherent over time.
 # -----------------------------------------------------------------------------
@@ -334,10 +333,7 @@ def main() -> int:
         row = client.table("employees").select("*").eq("id", emp_id).execute()
         if row.data:
             r = row.data[0]
-            print(
-                f"  {r['id']:8} {r['name']:20} {r['country']:6} "
-                f"{r['employment_type']:12} start={r['start_date']}"
-            )
+            print(f"  {r['id']:8} {r['name']:20} {r['country']:6} {r['employment_type']:12} start={r['start_date']}")
         else:
             print(f"  {emp_id} — NOT FOUND")
 

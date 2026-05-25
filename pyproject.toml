@@ -24,11 +24,21 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Long lines are unavoidable in these files and don't indicate problems:
+#   - tests/*: JSON test fixtures, multi-line scenario descriptions
+#   - scripts/*: embedded sample data, console output strings
+#   - mcp_servers/*: statute citations, user-facing recommendation messages
+#     (breaking them across string concatenations hurts readability)
+"tests/*" = ["E501"]
+"scripts/*" = ["E501"]
+"mcp_servers/*" = ["E501"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -106,9 +106,7 @@ class ClassifierResult(BaseModel):
             "'complex' = multi-agent AND conflict_possible AND/OR system action."
         )
     )
-    entities: ClassifierEntities = Field(
-        description="Entities extracted from the user input."
-    )
+    entities: ClassifierEntities = Field(description="Entities extracted from the user input.")
 
 
 # Cost-tracking sidecar (not in the schema returned by Claude — added by classify()).
@@ -177,8 +175,7 @@ You MUST call the `route_request` tool exactly once with your decision. Do not r
 ROUTE_TOOL = {
     "name": "route_request",
     "description": (
-        "Submit the routing decision for the user's HR request. "
-        "You MUST call this exactly once per request."
+        "Submit the routing decision for the user's HR request. You MUST call this exactly once per request."
     ),
     "input_schema": ClassifierResult.model_json_schema(),
 }
@@ -188,15 +185,25 @@ ROUTE_TOOL = {
 # Cost calculation
 # =============================================================================
 
-# Haiku 4.5 pricing (as of 2026-05).
+# Haiku 4.5 pricing (per million tokens, as of 2026-05).
 HAIKU_INPUT_PER_MTOK = 1.00
 HAIKU_OUTPUT_PER_MTOK = 5.00
+HAIKU_CACHE_WRITE_PER_MTOK = 1.25  # 1.25× input — first call writes the cache
+HAIKU_CACHE_READ_PER_MTOK = 0.10  # 0.10× input — cache hits cost ~10%
 
 
-def _compute_cost(input_tokens: int, output_tokens: int) -> float:
-    return (input_tokens / 1_000_000) * HAIKU_INPUT_PER_MTOK + (
-        output_tokens / 1_000_000
-    ) * HAIKU_OUTPUT_PER_MTOK
+def _compute_cost(
+    input_tokens: int,
+    output_tokens: int,
+    cache_creation_tokens: int = 0,
+    cache_read_tokens: int = 0,
+) -> float:
+    return (
+        input_tokens * HAIKU_INPUT_PER_MTOK
+        + cache_creation_tokens * HAIKU_CACHE_WRITE_PER_MTOK
+        + cache_read_tokens * HAIKU_CACHE_READ_PER_MTOK
+        + output_tokens * HAIKU_OUTPUT_PER_MTOK
+    ) / 1_000_000
 
 
 # =============================================================================
@@ -225,11 +232,17 @@ def classify(user_input: str) -> ClassificationResponse:
     """
     client = _get_client()
 
+    # Cache breakpoint on the last tool — caches system + tools in one block.
+    # System prompt + tool schema are stable across requests; only the user
+    # message changes. After the first call within the 5-minute window, the
+    # static portion (~80% of input tokens) drops to ~10% of input cost.
+    cached_tool = {**ROUTE_TOOL, "cache_control": {"type": "ephemeral"}}
+
     response = client.messages.create(
         model=CLASSIFIER_MODEL,
         max_tokens=CLASSIFIER_MAX_TOKENS,
         system=SYSTEM_PROMPT,
-        tools=[ROUTE_TOOL],
+        tools=[cached_tool],
         tool_choice={"type": "tool", "name": "route_request"},
         messages=[{"role": "user", "content": user_input}],
     )
@@ -238,21 +251,27 @@ def classify(user_input: str) -> ClassificationResponse:
     # should always be exactly one.
     tool_blocks = [b for b in response.content if b.type == "tool_use"]
     if not tool_blocks:
-        raise ValueError(
-            f"Classifier did not call route_request tool. Response: {response.content}"
-        )
+        raise ValueError(f"Classifier did not call route_request tool. Response: {response.content}")
 
     tool_input = tool_blocks[0].input
     # Pydantic validates and coerces. If the model returned something off-schema
     # (unlikely but possible), this raises a ValidationError.
     parsed = ClassifierResult.model_validate(tool_input)
 
-    cost = _compute_cost(response.usage.input_tokens, response.usage.output_tokens)
+    usage = response.usage
+    cache_creation = getattr(usage, "cache_creation_input_tokens", 0) or 0
+    cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
+    cost = _compute_cost(
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        cache_creation_tokens=cache_creation,
+        cache_read_tokens=cache_read,
+    )
 
     return ClassificationResponse(
         result=parsed,
-        input_tokens=response.usage.input_tokens,
-        output_tokens=response.usage.output_tokens,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
         cost_usd=cost,
     )
 

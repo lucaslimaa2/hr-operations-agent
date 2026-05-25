@@ -45,14 +45,8 @@ def main() -> int:
             f"complexity={r.complexity}"
         )
         e = r.entities
-        print(
-            f"  entities: name={e.employee_name!r}  country={e.country!r}  "
-            f"action={e.action_type!r}"
-        )
-        print(
-            f"  cost: ${resp.cost_usd:.5f}  "
-            f"(in={resp.input_tokens} out={resp.output_tokens})"
-        )
+        print(f"  entities: name={e.employee_name!r}  country={e.country!r}  action={e.action_type!r}")
+        print(f"  cost: ${resp.cost_usd:.5f}  (in={resp.input_tokens} out={resp.output_tokens})")
         total += resp.cost_usd
         print()
 

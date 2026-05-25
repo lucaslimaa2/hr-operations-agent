@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 if hasattr(sys.stdout, "reconfigure"):
@@ -46,9 +46,7 @@ def expect_auto(resp: ResolveResponse) -> tuple[bool, str]:
 def expect_escalate(resp: ResolveResponse) -> tuple[bool, str]:
     ok = resp.result.resolution == "escalate"
     brief = resp.result.escalation_brief
-    has_full_brief = brief is not None and all(
-        [brief.conflict, brief.recommendation, brief.question_for_hr]
-    )
+    has_full_brief = brief is not None and all([brief.conflict, brief.recommendation, brief.question_for_hr])
     return (
         ok and has_full_brief,
         f"resolution={resp.result.resolution}, brief_complete={has_full_brief}, "
@@ -81,13 +79,21 @@ SCENARIOS: list[Scenario] = [
                     "args": {
                         "action": "terminate_without_cause",
                         "country": "DE",
-                        "context": {"employment_type": "full-time", "tenure_months": 3, "notice_days_given": 14},
+                        "context": {
+                            "employment_type": "full-time",
+                            "tenure_months": 3,
+                            "notice_days_given": 14,
+                        },
                     },
                     "result": '{"compliant": true, "reason": "Proposed 14 days notice meets the statutory minimum of 14 days for a full-time employee with 3 months tenure (Probezeit).", "citation": "BGB §622(3)"}',
                 },
             ],
             proposed_tool="update_employment_status",
-            proposed_args={"employee_id": "emp_005", "status": "terminated", "effective_date": "2026-06-08"},
+            proposed_args={
+                "employee_id": "emp_005",
+                "status": "terminated",
+                "effective_date": "2026-06-08",
+            },
         ),
         predicate=expect_auto,
     ),
@@ -111,13 +117,21 @@ SCENARIOS: list[Scenario] = [
                     "args": {
                         "action": "terminate_without_cause",
                         "country": "DE",
-                        "context": {"employment_type": "full-time", "tenure_months": 77, "notice_days_given": 14},
+                        "context": {
+                            "employment_type": "full-time",
+                            "tenure_months": 77,
+                            "notice_days_given": 14,
+                        },
                     },
                     "result": '{"compliant": false, "reason": "Proposed 14 days notice is BELOW the statutory minimum of 60 days for a full-time employee with 77 months tenure.", "citation": "BGB §622(2) Nr. 2", "recommendation": "Increase notice to at least 60 days, OR pay in lieu."}',
                 },
             ],
             proposed_tool="update_employment_status",
-            proposed_args={"employee_id": "emp_004", "status": "terminated", "effective_date": "2026-06-08"},
+            proposed_args={
+                "employee_id": "emp_004",
+                "status": "terminated",
+                "effective_date": "2026-06-08",
+            },
         ),
         predicate=expect_escalate,
     ),
@@ -141,7 +155,10 @@ SCENARIOS: list[Scenario] = [
                     "args": {
                         "action": "terminate_protected_employee",
                         "country": "BR",
-                        "context": {"employment_type": "CLT", "protection_type": "pregnant_employee"},
+                        "context": {
+                            "employment_type": "CLT",
+                            "protection_type": "pregnant_employee",
+                        },
                     },
                     "result": '{"compliant": false, "reason": "Ordinary termination of an employee in protected category pregnant_employee is BLOCKED. Scope: from confirmation of pregnancy through 5 months postpartum.", "citation": "ADCT Art. 10, II, b"}',
                 },
@@ -219,7 +236,11 @@ SCENARIOS: list[Scenario] = [
                 },
             ],
             proposed_tool="update_employment_status",
-            proposed_args={"employee_id": "emp_010", "status": "on_leave", "effective_date": "2026-06-01"},
+            proposed_args={
+                "employee_id": "emp_010",
+                "status": "on_leave",
+                "effective_date": "2026-06-01",
+            },
         ),
         predicate=expect_auto,
     ),

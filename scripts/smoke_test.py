@@ -99,10 +99,7 @@ def check_pinecone() -> bool:
         names = [idx.name for idx in pc.list_indexes()]
         if index_name in names:
             stats = pc.Index(index_name).describe_index_stats()
-            print(
-                f"{OK} Pinecone — index '{index_name}' exists "
-                f"(vectors: {stats.get('total_vector_count', 0)})"
-            )
+            print(f"{OK} Pinecone — index '{index_name}' exists (vectors: {stats.get('total_vector_count', 0)})")
             return True
         print(f"{FAIL} Pinecone — index '{index_name}' not found. Existing: {names}")
         return False

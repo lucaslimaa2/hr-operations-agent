@@ -22,9 +22,10 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # Make project root importable when running this script directly.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -171,8 +172,7 @@ SCENARIOS: list[Scenario] = [
         predicate=lambda r: (
             r.get("compliant") is True
             and any(
-                kw in r.get("recommendation", "").lower()
-                for kw in ("final wage", "final pay", "§203", "waiting-time")
+                kw in r.get("recommendation", "").lower() for kw in ("final wage", "final pay", "§203", "waiting-time")
             ),
             f"compliant={r.get('compliant')}, recommendation surfaces final-pay rule: "
             f"{any(kw in r.get('recommendation', '').lower() for kw in ('final wage', 'final pay', '§203'))}",
