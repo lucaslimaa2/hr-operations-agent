@@ -495,6 +495,140 @@ def _validate_mass_layoff(country: str, ctx: dict[str, Any]) -> dict[str, Any]:
             "citation": "STF RE 999.435 (2022); CLT Art. 477-A (Lei 13.467/2017 attempted to relax, partially overturned)",
         }
 
+    if country == "UK":
+        # TULRCA 1992 §188: 20+ proposed redundancies at one establishment in a 90-day period.
+        if affected < 20:
+            return {
+                "compliant": True,
+                "reason": (
+                    f"Layoff of {affected} at a {total}-employee establishment does not meet "
+                    "the TULRCA §188 collective-redundancy threshold of 20+ proposed dismissals "
+                    "at one establishment within a 90-day period."
+                ),
+                "recommendation": (
+                    "Proceed as individual dismissals. Each requires the ACAS Code procedure "
+                    "(investigation, written allegations, hearing, decision, appeal). For redundancy, "
+                    "follow individual consultation and statutory redundancy pay where qualifying."
+                ),
+                "citation": "TULRCA 1992 §188",
+            }
+        consultation_days = 45 if affected >= 100 else 30
+        return {
+            "compliant": False,
+            "reason": (
+                f"Proposed redundancy of {affected} employees at a {total}-employee establishment "
+                f"triggers TULRCA 1992 §188. Statutory consultation period of {consultation_days} "
+                f"days is required before the first dismissal takes effect."
+            ),
+            "recommendation": (
+                f"(1) Consult appropriate representatives (recognised trade union or elected "
+                f"employee representatives) for at least {consultation_days} days before the first "
+                f"dismissal. (2) Notify the Secretary of State via BEIS form HR1 at the same time "
+                f"as consultation begins (criminal offence to omit). (3) Failure to consult exposes "
+                f"the employer to a protective award of up to 90 days' gross pay per affected "
+                f"employee under TULRCA §189, in addition to ordinary unfair dismissal liability."
+            ),
+            "citation": "TULRCA 1992 §188; §189 (protective award); §193 (HR1 notification)",
+        }
+
+    if country == "FR":
+        # Code du travail Art. L1233-61: PSE for 10+ dismissals in 30 days at firms with 50+ employees.
+        if total >= 50 and affected >= 10:
+            return {
+                "compliant": False,
+                "reason": (
+                    f"Proposed dismissal of {affected} employees in 30 days at a {total}-employee "
+                    "firm triggers PSE (Plan de Sauvegarde de l'Emploi) requirement under Code du "
+                    "travail Art. L1233-61."
+                ),
+                "recommendation": (
+                    "(1) Draft a PSE including: measures to avoid or limit dismissals, reclassement "
+                    "options within the group (including international), outplacement support (cellule "
+                    "de reclassement or congé de reclassement). (2) Consult the CSE on the project "
+                    "and the PSE. (3) Either negotiate an accord collectif majoritaire with unions OR "
+                    "submit unilateral PSE for DREETS validation/approval. (4) Without an approved PSE, "
+                    "individual dismissals in the collective procedure are null (Art. L1235-10)."
+                ),
+                "citation": "Code du travail Art. L1233-61 (PSE); Art. L1235-10 (nullity if PSE invalid)",
+            }
+        # Firms <50 employees with 10+ dismissals or firms 50+ with <10: still have CSE consultation duties,
+        # but no PSE. Surface that distinction.
+        if affected >= 10:
+            return {
+                "compliant": False,
+                "reason": (
+                    f"Proposed dismissal of {affected} employees in 30 days at a {total}-employee firm "
+                    "is below the PSE threshold (firms <50 employees) but still triggers collective "
+                    "consultation duties under Code du travail Art. L1233-8 et seq."
+                ),
+                "recommendation": (
+                    "Consult CSE (where one exists), inform DREETS, and respect priority-of-rehiring "
+                    "obligation. No PSE required at this firm size, but individual dismissals must still "
+                    "follow the standard licenciement économique procedure."
+                ),
+                "citation": "Code du travail Art. L1233-8 et seq.",
+            }
+        return {
+            "compliant": True,
+            "reason": (
+                f"Dismissal of {affected} employees does not meet the collective threshold "
+                "(10+ in 30 days). Proceed as individual licenciement économique."
+            ),
+            "recommendation": (
+                "Follow standard licenciement économique procedure for each employee: convocation, "
+                "entretien préalable, notification with precise economic grounds. CSE information "
+                "where applicable."
+            ),
+            "citation": "Code du travail Art. L1233-3, L1233-8",
+        }
+
+    if country == "ES":
+        # Estatuto de los Trabajadores Art. 51: despido colectivo thresholds within 90-day window.
+        # <100 employees: 10+. 100-300: 10%. >300: 30+. Plus any dismissal of entire workforce >5.
+        if total < 100:
+            threshold_met = affected >= 10
+            threshold_desc = "10+ employees at a firm with <100 staff"
+        elif total <= 300:
+            threshold_met = affected >= max(1, int(0.10 * total))
+            threshold_desc = f"10% of workforce (≥{max(1, int(0.10 * total))} at this firm size)"
+        else:
+            threshold_met = affected >= 30
+            threshold_desc = "30+ employees at a firm with >300 staff"
+
+        if not threshold_met:
+            return {
+                "compliant": True,
+                "reason": (
+                    f"Dismissal of {affected} at a {total}-employee firm does not meet the despido "
+                    f"colectivo threshold ({threshold_desc}, 90-day window)."
+                ),
+                "recommendation": (
+                    "Proceed as individual despido objetivo for each employee. Carta de despido with "
+                    "ETOP justification, simultaneous tender of 20-day/year severance (capped 12 months), "
+                    "and 15 days notice. SMAC conciliation step applies if challenged."
+                ),
+                "citation": "Estatuto de los Trabajadores Art. 51, Art. 53",
+            }
+        consultation_days = 30 if total >= 50 else 15
+        return {
+            "compliant": False,
+            "reason": (
+                f"Dismissal of {affected} at a {total}-employee firm triggers despido colectivo under "
+                f"Estatuto de los Trabajadores Art. 51 ({threshold_desc}, 90-day window). Mandatory "
+                f"período de consultas of {consultation_days} days with worker representatives."
+            ),
+            "recommendation": (
+                f"(1) Notify the Autoridad Laboral at the start of the período de consultas. "
+                f"(2) Conduct {consultation_days}-day consultation with worker representatives, "
+                f"providing the substantial information dossier (causes, selection criteria, "
+                f"redeployment measures, outplacement). (3) Apply the statutory floor of 20 days "
+                f"per year of service per affected employee (cap 12 months), or the more generous "
+                f"convenio colectivo terms where applicable. (4) Without consultation, individual "
+                f"dismissals are improcedente / nulo."
+            ),
+            "citation": "Estatuto de los Trabajadores Art. 51",
+        }
+
     return {
         "compliant": False,
         "reason": "Mass-layoff logic not implemented for this country.",

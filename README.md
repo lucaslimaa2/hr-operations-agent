@@ -96,7 +96,7 @@ Tools are MCP servers: separate logical units with a defined protocol contract. 
 | 5 | Policy RAG server (5 docs, Pinecone, structural chunking) | ✅ |
 | 6 | Conflict resolver + write gating + escalation UI | ✅ |
 | 7 | UI polish | ✅ |
-| 8 | Expand jurisdiction to 13 countries | ⏳ |
+| 8 | Expand jurisdiction (batch A: UK + FR + ES shipped; batches B + C pending) | 🟡 |
 | 9 | Hardening: rate limit, prompt caching, CI | ✅ |
 | 10 | Custom domain, portfolio launch | ✅ |
 
@@ -118,15 +118,18 @@ Full phase plan in [`docs/roadmap.md`](docs/roadmap.md).
 
 ---
 
-## Jurisdiction coverage (Phase 6)
+## Jurisdiction coverage
 
 | Country | Employment types | Source |
 |---|---|---|
 | Brazil (BR) | CLT (registered), PJ (contractor) | CLT, Lei 12.506/2011, Lei 8.036/1990, ADCT Art. 10 |
 | Germany (DE) | full-time (probation + post-probation) | BGB §622, KSchG, BetrVG, MuSchG, SGB IX |
 | California (US-CA) | full-time | Cal. Lab. Code §201/§202/§203/§2922, §§1400–1408 (Cal-WARN), federal WARN |
+| United Kingdom (UK) | full-time | ERA 1996 §86, §§94–98, §§135, 162; TULRCA 1992 §188; PIDA 1998; Equality Act 2010 |
+| France (FR) | non-cadre, cadre | Code du travail Art. L1234-1, L1234-9, L1233-61 (PSE), L1235-3 (barème Macron); applicable CCN |
+| Spain (ES) | full-time | Estatuto de los Trabajadores Art. 51, 53, 56; Ley 36/2011 (LRJS) |
 
-Other countries return a structured *"not covered, recommend legal review"* response. **Phase 8** expands to IT, FR, UK, ES, SG, ZA, US-TX, US-NY, with JP and IN remaining as graceful-fallback tests.
+Other countries return a structured *"not covered, recommend legal review"* response. Phase 8 (in progress) is expanding to IT, SG, ZA, US-TX, US-NY, with JP and IN as graceful-fallback tests. UK, FR, ES already shipped in batch A.
 
 ---
 

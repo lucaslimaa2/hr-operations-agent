@@ -219,6 +219,114 @@ SCENARIOS: list[Scenario] = [
         ),
         predicate=expect_non_compliant,
     ),
+    # ---------- UK (Phase 8 batch A) ----------
+    Scenario(
+        description=(
+            "UK notice scales by tenure — 5yr employee → 5 weeks (35 days) per ERA 1996 §86(1)(b).\n"
+            "        The per-year scaling from year 2 to year 12, before the 12-week cap kicks in."
+        ),
+        call_repr="get_notice_period('UK', tenure_months=60)",
+        call=lambda: get_notice_period("UK", 60),
+        predicate=expect_notice_days(35),
+    ),
+    Scenario(
+        description=(
+            "UK notice cap — 20yr employee → 12 weeks (84 days), the ERA 1996 §86(1)(c) cap.\n"
+            "        Anything above 12 years tenure caps at 12 weeks."
+        ),
+        call_repr="get_notice_period('UK', tenure_months=240)",
+        call=lambda: get_notice_period("UK", 240),
+        predicate=expect_notice_days(84),
+    ),
+    Scenario(
+        description=(
+            "UK collective redundancy — 25 employees at a 60-person site triggers TULRCA 1992 §188.\n"
+            "        30-day consultation + HR1 notification required (45 days if 100+ affected)."
+        ),
+        call_repr="validate_action('mass_layoff', 'UK', {total_employees: 60, affected_count: 25})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "UK",
+            {"total_employees": 60, "affected_count": 25},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "TULRCA" in r.get("citation", ""),
+            f"compliant={r.get('compliant')}, mentions TULRCA: {'TULRCA' in r.get('citation', '')}",
+        ),
+    ),
+    # ---------- FR (Phase 8 batch A) ----------
+    Scenario(
+        description=(
+            "FR non-cadre notice — 5yr employee → 60 days (2 months) per Code du travail Art. L1234-1.\n"
+            "        Statutory floor for non-cadres with ≥2yr tenure."
+        ),
+        call_repr="get_notice_period('FR', tenure_months=60, employment_type='non-cadre')",
+        call=lambda: get_notice_period("FR", 60, "non-cadre"),
+        predicate=expect_notice_days(60),
+    ),
+    Scenario(
+        description=(
+            "FR cadre notice — 1yr employee → 90 days (3 months by CCN, e.g. Syntec).\n"
+            "        Cadre 3-month notice is market-standard, set by industry agreement, not the Code."
+        ),
+        call_repr="get_notice_period('FR', tenure_months=12, employment_type='cadre')",
+        call=lambda: get_notice_period("FR", 12, "cadre"),
+        predicate=expect_notice_days(90),
+    ),
+    Scenario(
+        description=(
+            "FR default routing — 'full-time' should auto-resolve to non-cadre.\n"
+            "        Lets the orchestrator stay agnostic about cadre vs non-cadre distinction."
+        ),
+        call_repr="get_termination_rules('FR', 'full-time', tenure_months=36)",
+        call=lambda: get_termination_rules("FR", "full-time", 36),
+        predicate=lambda r: (
+            r.get("employment_type") == "non-cadre",
+            f"employment_type={r.get('employment_type')} (expected non-cadre)",
+        ),
+    ),
+    Scenario(
+        description=(
+            "FR PSE — 15 dismissals in 30 days at a 100-employee firm triggers Plan de Sauvegarde de l'Emploi.\n"
+            "        Code du travail Art. L1233-61: 10+ at firms with 50+ employees."
+        ),
+        call_repr="validate_action('mass_layoff', 'FR', {total_employees: 100, affected_count: 15})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "FR",
+            {"total_employees": 100, "affected_count": 15},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "L1233-61" in r.get("citation", ""),
+            f"compliant={r.get('compliant')}, mentions L1233-61: {'L1233-61' in r.get('citation', '')}",
+        ),
+    ),
+    # ---------- ES (Phase 8 batch A) ----------
+    Scenario(
+        description=(
+            "ES despido objetivo notice — 5yr employee → 15 calendar days per ET Art. 53.1.c.\n"
+            "        Spanish notice is a flat 15 days for objective dismissal, regardless of tenure."
+        ),
+        call_repr="get_notice_period('ES', tenure_months=60)",
+        call=lambda: get_notice_period("ES", 60),
+        predicate=expect_notice_days(15),
+    ),
+    Scenario(
+        description=(
+            "ES despido colectivo — 12 dismissals at an 80-employee firm triggers ET Art. 51.\n"
+            "        Firms with <100 staff: 10+ dismissals in 90-day window triggers collective procedure."
+        ),
+        call_repr="validate_action('mass_layoff', 'ES', {total_employees: 80, affected_count: 12})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "ES",
+            {"total_employees": 80, "affected_count": 12},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "Art. 51" in r.get("citation", ""),
+            f"compliant={r.get('compliant')}, mentions Art. 51: {'Art. 51' in r.get('citation', '')}",
+        ),
+    ),
     # ---------- Graceful fallback for uncovered country ----------
     Scenario(
         description=(

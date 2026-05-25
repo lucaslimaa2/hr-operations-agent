@@ -235,7 +235,17 @@ Cross-cutting threads (run alongside phases):
 
 ---
 
-## Phase 8 — Expand jurisdiction to remaining countries ⏳
+## Phase 8 — Expand jurisdiction to remaining countries 🟡 in progress
+
+**Batch A shipped (UK + FR + ES, commit `b47404a`):**
+- `docs/jurisdiction.md` extended from 459 to 916 lines with three new country sections (UK ERA 1996 + TULRCA + redundancy; FR Code du travail + indemnité de licenciement + PSE; ES Estatuto de los Trabajadores objetivo/improcedente/colectivo).
+- `mcp_servers/jurisdiction_rules.py` gained `UK_FULL_TIME`, `FR_NON_CADRE`, `FR_CADRE`, `ES_FULL_TIME` JurisdictionRule entries. `COVERED_COUNTRIES` now `{BR, DE, US-CA, UK, FR, ES}`. FR + 'full-time' auto-resolves to non-cadre so the orchestrator stays agnostic about the cadre/non-cadre split.
+- `mcp_servers/jurisdiction_server.py` `validate_action` `_validate_mass_layoff` gained TULRCA §188 (UK), L1233-61 PSE (FR), Art. 51 despido colectivo (ES) branches.
+- `scripts/test_jurisdiction.py` extended from 12 to 21 scenarios. pytest also at 21/21.
+
+**Batch B (deferred):** IT (TFR + CCNL notice), SG (Employment Act + retrenchment), ZA (LRA + CCMA), US-TX (at-will + Payday Law), US-NY (NY WARN).
+
+**Batch C (deferred):** JP + IN as graceful-fallback sections in `docs/jurisdiction.md` (no Python rules; engine returns the structured "not covered" message).
 
 **Goal:** Broaden coverage from 3 → 13 jurisdictions. Mechanical work that proves the architecture scales.
 
