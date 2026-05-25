@@ -4,7 +4,7 @@ A production-shaped multi-agent system that handles HR workflow requests in natu
 
 Built as part of [Lucas Lima's AI portfolio](https://lucaslima.xyz/ai-portfolio).
 
-**Live demo:** _(add Vercel URL after publishing)_
+**Live demo:** [hr-operations-agent-iota.vercel.app](https://hr-operations-agent-iota.vercel.app)
 
 ---
 
@@ -130,7 +130,7 @@ The system handles all of these end-to-end:
 ## Quickstart
 
 ```bash
-git clone https://github.com/<you>/hr-operations-agent
+git clone https://github.com/lucaslimaa2/hr-operations-agent.git
 cd hr-operations-agent
 uv sync
 
