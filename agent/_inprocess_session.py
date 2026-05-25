@@ -52,7 +52,6 @@ from mcp_servers.hris_server import mcp as _hris_mcp
 from mcp_servers.jurisdiction_server import mcp as _jurisdiction_mcp
 from mcp_servers.policy_server import mcp as _policy_mcp
 
-
 # Registry: agent_name -> FastMCP server instance.
 # Mirror of orchestrator.MCP_SERVERS but for in-process use.
 INPROCESS_SERVERS: dict[str, FastMCP] = {
