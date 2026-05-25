@@ -85,7 +85,4 @@ def test_classifier_routes_correctly(
     # fail on them; the routing decision (agents_required) is the contract.
     actual_action = resp.result.entities.action_type
     if actual_action not in allowed_actions:
-        print(
-            f"\n[advisory] action_type drift for {query!r}: "
-            f"got {actual_action!r}, expected one of {allowed_actions}"
-        )
+        print(f"\n[advisory] action_type drift for {query!r}: got {actual_action!r}, expected one of {allowed_actions}")

@@ -25,7 +25,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -97,6 +97,7 @@ async def ping() -> PingResponse:
 # Chat endpoints are rate-limited per-IP. 10/min is generous for human use
 # (one request per 6s) but catches scripted abuse. The Limiter decorator
 # needs the request object as the first parameter to extract the IP.
+
 
 @app.post("/api/chat", response_model=OrchestratorResponse)
 @limiter.limit("10/minute")
