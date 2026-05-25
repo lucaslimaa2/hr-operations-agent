@@ -76,8 +76,15 @@ SONNET_CACHE_READ_PER_MTOK = 0.30  # 0.10× input — cache hits cost ~10%
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# MCP server registry. agent_name → how to launch.
-# Add hris (Phase 4) and policy (Phase 5) here; orchestrator code does not change.
+# Transport selection. On Vercel (or any serverless platform that sets the
+# VERCEL env var), subprocess spawning is unreliable — the spawned Python
+# can't import mcp_servers because dependencies live under /var/task/_vendor/
+# and PYTHONPATH isn't inherited consistently. On serverless we run MCP servers
+# IN-PROCESS via _inprocess_session.py — same tool functions, same args, no
+# subprocess. On long-running hosts (local dev, Railway, Fly.io), we keep the
+# subprocess + stdio transport for true process isolation.
+IS_SERVERLESS = bool(os.environ.get("VERCEL"))
+
 # Write tools — these mutate state and must be gated by the conflict resolver
 # before they execute. Read-only tools pass through. When adding a new write
 # tool (Phase 4+ HRIS, future PIP / comp / etc.), add it here.
@@ -240,13 +247,23 @@ async def run_stream(
 
         # ---------- 2. Connect to MCP servers + aggregate tools ----------
         async with AsyncExitStack() as stack:
-            sessions: dict[str, ClientSession] = {}
+            sessions: dict[str, Any] = {}  # ClientSession (stdio) or InProcessSession (serverless)
             for agent_name in available_agents:
-                params = MCP_SERVERS[agent_name]
-                read, write = await stack.enter_async_context(stdio_client(params))
-                session = await stack.enter_async_context(ClientSession(read, write))
-                await session.initialize()
-                sessions[agent_name] = session
+                if IS_SERVERLESS:
+                    # In-process direct calls — skip subprocess.
+                    from agent._inprocess_session import INPROCESS_SERVERS, InProcessSession
+
+                    mcp_server = INPROCESS_SERVERS.get(agent_name)
+                    if mcp_server is None:
+                        continue
+                    sessions[agent_name] = InProcessSession(mcp_server)
+                else:
+                    # Local / long-running host — stdio subprocess as normal.
+                    params = MCP_SERVERS[agent_name]
+                    read, write = await stack.enter_async_context(stdio_client(params))
+                    session = await stack.enter_async_context(ClientSession(read, write))
+                    await session.initialize()
+                    sessions[agent_name] = session
 
             anthropic_tools: list[dict[str, Any]] = []
             tool_to_session: dict[str, ClientSession] = {}
