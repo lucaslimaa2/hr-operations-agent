@@ -232,6 +232,53 @@ async def run_stream(
         total_cost += classification.cost_usd
         agents_required = classification.result.agents_required
 
+        # ---------- 1a. Scope gate ----------
+        # If the classifier decided the request is out of scope for the HR
+        # Operations Agent, short-circuit: no MCP servers, no Sonnet call, no
+        # tools. Stream a natural refusal as plain text and return. The UI
+        # sees a normal text response (no pills, no chips, no special label).
+        # Audit log records resolution='out_of_scope' for server-side
+        # observability.
+        if not classification.result.in_scope:
+            resolution = "out_of_scope"
+            refusal = (
+                "I'm an HR Operations Agent. I can help with things like terminations, "
+                "severance, notice periods, employee record lookups, contractor-to-FTE "
+                "conversions, and HR policy questions. Try one of those."
+            )
+            # Emit a minimal classifier event with empty agents so the UI's
+            # pill row stays empty (no badges leak the scope decision).
+            yield {
+                "type": "classifier",
+                "agents_required": [],
+                "agents_available": [],
+                "agents_missing": [],
+                "complexity": classification.result.complexity,
+                "entities": classification.result.entities.model_dump(),
+            }
+            # Stream the refusal as a single text_delta so the UI renders it
+            # exactly like a normal short response.
+            yield {"type": "text_delta", "text": refusal}
+            log_request(
+                session_id=session_id,
+                user_input=user_input,
+                agents_invoked=[],
+                tool_calls=[],
+                resolution=resolution,
+                escalated=False,
+                cost_usd=total_cost,
+            )
+            yield {
+                "type": "done",
+                "session_id": session_id,
+                "agents_invoked": [],
+                "cost_usd": round(total_cost, 6),
+                "tool_call_count": 0,
+                "truncated": False,
+                "escalated": False,
+            }
+            return
+
         # Filter to what we have configured.
         available_agents = [a for a in agents_required if a in MCP_SERVERS]
         missing_agents = [a for a in agents_required if a not in MCP_SERVERS]
