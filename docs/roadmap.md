@@ -221,7 +221,7 @@ Cross-cutting threads (run alongside phases):
 
 ---
 
-## Phase 7 — UI polish ⏳
+## Phase 7 — UI polish ✅
 
 **Goal:** Take the UI from "functional demo" to "portfolio-ready."
 

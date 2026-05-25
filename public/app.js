@@ -12,9 +12,17 @@ const form = document.getElementById("composer");
 const input = document.getElementById("question");
 const sendBtn = document.getElementById("send");
 
+// Session-stats footer
+const $sessionRequests = document.getElementById("session-requests");
+const $sessionToolCalls = document.getElementById("session-tool-calls");
+const $sessionCost = document.getElementById("session-cost");
+
 // Session memory — orchestrator returns a session_id on the first done event;
 // we reuse it so audit_log rows group by session.
 let sessionId = null;
+
+// Session rollup counters — updated on every 'done' event.
+const session = { requests: 0, toolCalls: 0, costUsd: 0 };
 
 // Wire up the suggestion chips
 document.querySelectorAll(".suggest").forEach((btn) => {
@@ -45,13 +53,15 @@ form.addEventListener("submit", async (e) => {
 
     if (!resp.ok) {
       const errText = await safeText(resp);
-      finalizeAgentMessage(agentMsg, `Error ${resp.status}: ${errText || resp.statusText}`, true);
+      const { title, hint } = classifyHttpError(resp.status, errText);
+      finalizeAgentMessage(agentMsg, `${title}${hint ? "  ·  " + hint : ""}`, true);
       return;
     }
 
     await consumeSSE(resp, agentMsg);
   } catch (err) {
-    finalizeAgentMessage(agentMsg, `Network error: ${err.message}`, true);
+    const { title, hint } = classifyNetworkError(err);
+    finalizeAgentMessage(agentMsg, `${title}${hint ? "  ·  " + hint : ""}`, true);
   } finally {
     setSending(false);
     input.focus();
@@ -118,6 +128,7 @@ function handleEvent(event, agentMsg) {
         event.truncated,
         event.escalated
       );
+      updateSessionStats(event.cost_usd, event.tool_call_count);
       break;
     case "error":
       finalizeAgentMessage(agentMsg, event.message, true);
@@ -162,16 +173,21 @@ function renderAgentPills(agentMsg, available, missing) {
   agentMsg.agents.innerHTML = "";
   for (const a of available) {
     const pill = document.createElement("span");
-    pill.className = "agent-pill";
+    // Per-agent class so each gets its own color (see style.css).
+    pill.className = `agent-pill ${cssSafe(a)}`;
     pill.textContent = a;
     agentMsg.agents.appendChild(pill);
   }
   for (const m of missing) {
     const pill = document.createElement("span");
-    pill.className = "agent-pill deferred";
+    pill.className = `agent-pill deferred ${cssSafe(m)}`;
     pill.textContent = `${m} · deferred`;
     agentMsg.agents.appendChild(pill);
   }
+}
+
+function cssSafe(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 }
 
 function addToolPill(agentMsg, id, toolName) {
@@ -282,6 +298,19 @@ function setSending(isSending) {
   sendBtn.textContent = isSending ? "Thinking…" : "Ask";
 }
 
+function updateSessionStats(reqCost, reqToolCalls) {
+  session.requests += 1;
+  session.toolCalls += reqToolCalls || 0;
+  session.costUsd += reqCost || 0;
+  $sessionRequests.textContent = `${session.requests} request${session.requests === 1 ? "" : "s"}`;
+  $sessionToolCalls.textContent = `${session.toolCalls} tool call${session.toolCalls === 1 ? "" : "s"}`;
+  $sessionCost.textContent = formatCostFull(session.costUsd);
+}
+
+function formatCostFull(usd) {
+  return `$${usd.toFixed(5)}`;
+}
+
 function formatDuration(ms) {
   if (ms == null) return "";
   if (ms < 1000) return `${ms}ms`;
@@ -294,6 +323,50 @@ function scrollToBottom() {
 
 async function safeText(resp) {
   try { return await resp.text(); } catch { return ""; }
+}
+
+function classifyHttpError(status, body) {
+  if (status === 429) {
+    return {
+      title: "Rate limited",
+      hint: "Too many requests in a short window. Wait a moment and try again.",
+    };
+  }
+  if (status === 504) {
+    return {
+      title: "Agent timed out",
+      hint: "The serverless function exceeded its 60s limit. Try a simpler request, or wait a moment for the function to recycle.",
+    };
+  }
+  if (status >= 500) {
+    return {
+      title: `Server error (${status})`,
+      hint: "The agent service may be cold-starting or restarting. Try again in a few seconds.",
+    };
+  }
+  if (status === 401 || status === 403) {
+    return {
+      title: "Authentication failed",
+      hint: "An API key is likely missing or misconfigured server-side.",
+    };
+  }
+  return {
+    title: `Request rejected (HTTP ${status})`,
+    hint: body ? body.slice(0, 240) : "No additional detail from server.",
+  };
+}
+
+function classifyNetworkError(err) {
+  if (err && err.name === "TypeError" && /fetch/i.test(err.message || "")) {
+    return {
+      title: "Couldn't reach the agent",
+      hint: "Check your connection. If the page is deployed, the function may be cold-starting.",
+    };
+  }
+  return {
+    title: "Unexpected error",
+    hint: err && err.message ? err.message : String(err),
+  };
 }
 
 function escapeHtml(s) {
