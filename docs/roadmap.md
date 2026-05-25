@@ -222,6 +222,7 @@ Cross-cutting threads (run alongside phases):
 ---
 
 ## Phase 7 — UI polish ✅
+*(See Phase 7 commit `f40b73b` for the colored agent pills, session-cost rollup, error-state classification, and mobile pass.)*
 
 **Goal:** Take the UI from "functional demo" to "portfolio-ready."
 
@@ -250,7 +251,7 @@ Cross-cutting threads (run alongside phases):
 
 ---
 
-## Phase 9 — Hardening ⏳
+## Phase 9 — Hardening ✅
 
 **Goal:** Production-grade observability and cost discipline. Not features — operational maturity.
 

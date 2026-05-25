@@ -23,22 +23,38 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from agent.orchestrator import OrchestratorResponse, run, run_stream
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PUBLIC_DIR = PROJECT_ROOT / "public"
 
+# Per-IP rate limiter. In-memory backend — works perfectly in local/dev and
+# in a single warm Vercel function instance. On serverless cold starts, the
+# counters reset (each cold container has its own memory), so this is
+# "best-effort defense" against accidental abuse rather than guaranteed rate
+# limiting. For a portfolio demo running on Vercel Hobby, that's the right
+# balance: it catches obvious abuse from one IP rapid-firing requests within
+# a warm window, without the complexity of an external state store (Redis).
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="HR Operations Agent",
-    description="Multi-agent HR ops system over MCP. See https://github.com/...",
+    description="Multi-agent HR ops system over MCP. See https://github.com/lucaslimaa2/hr-operations-agent",
     version="0.1.0",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS — open during dev. Tighten before any sensitive deployment.
 app.add_middleware(
@@ -78,8 +94,13 @@ async def ping() -> PingResponse:
     return PingResponse(status="ok")
 
 
+# Chat endpoints are rate-limited per-IP. 10/min is generous for human use
+# (one request per 6s) but catches scripted abuse. The Limiter decorator
+# needs the request object as the first parameter to extract the IP.
+
 @app.post("/api/chat", response_model=OrchestratorResponse)
-async def chat(req: ChatRequest) -> OrchestratorResponse:
+@limiter.limit("10/minute")
+async def chat(request: Request, req: ChatRequest) -> OrchestratorResponse:
     """Run a request synchronously and return the full response as JSON.
 
     Use /api/chat/stream for token-by-token streaming (what the UI uses).
@@ -88,7 +109,8 @@ async def chat(req: ChatRequest) -> OrchestratorResponse:
 
 
 @app.post("/api/chat/stream")
-async def chat_stream(req: ChatRequest) -> StreamingResponse:
+@limiter.limit("10/minute")
+async def chat_stream(request: Request, req: ChatRequest) -> StreamingResponse:
     """SSE stream of orchestrator events.
 
     Each line is `data: <json>\\n\\n`. Event types:

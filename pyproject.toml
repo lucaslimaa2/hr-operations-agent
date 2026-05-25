@@ -12,6 +12,7 @@ dependencies = [
     "pinecone>=9.0.1",
     "pydantic>=2.13.4",
     "python-dotenv>=1.2.2",
+    "slowapi>=0.1.9",
     "supabase>=2.30.0",
     "uvicorn[standard]>=0.47.0",
 ]

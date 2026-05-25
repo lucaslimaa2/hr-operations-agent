@@ -160,6 +160,23 @@ uv run uvicorn api.index:app --host 127.0.0.1 --port 8000
 
 ---
 
+## Observability
+
+Every request writes one row to the Supabase `audit_log` table — full tool-call trace, agents invoked, cost in USD, resolution (`auto` / `escalate` / `write` / `truncated`), and the `escalated` flag. The audit log isn't write-only; it's queryable.
+
+[`db/cost_dashboard.sql`](db/cost_dashboard.sql) defines four reusable Postgres views you can paste into Supabase:
+
+| View | Query shape |
+|---|---|
+| `daily_cost` | spend + request counts + escalation rate per day |
+| `session_summary` | aggregate per chat session — cost, requests, agents invoked |
+| `agent_usage` | invocation count + attributed cost per MCP server |
+| `recent_escalations` | the last 50 escalated requests with full context |
+
+Example: `SELECT * FROM daily_cost LIMIT 7;` shows the past week of spend, escalations, and cap-truncations at a glance.
+
+---
+
 ## Verifying correctness
 
 Three isolated test scripts, each runnable independently:
