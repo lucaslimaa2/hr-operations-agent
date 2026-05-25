@@ -8,7 +8,7 @@ A production-shaped multi-agent system that handles HR workflow requests in natu
 
 Built as part of [Lucas Lima's AI portfolio](https://lucaslima.xyz/ai-portfolio).
 
-**Live demo:** [hr-operations-agent-iota.vercel.app](https://hr-operations-agent-iota.vercel.app)
+**Live demo:** [hr-agent.lucaslima.xyz](https://hr-agent.lucaslima.xyz)
 
 ---
 
@@ -22,6 +22,18 @@ The user is an HRBP. They type a request like *"Terminate Sarah Chen with 2 week
 4. Records every request in an audit log with full tool-call trace and per-request cost
 
 The architecture is the point. The MCP boundary, the classifier/orchestrator split, the deterministic compliance engine, the write-gating layers — all production-grade patterns scaled down to a single demo.
+
+### What's mocked vs what's real
+
+| Mocked | Real |
+|---|---|
+| 20 synthetic employees in Supabase (not a real Workday) | Live Claude API (Sonnet 4.5 + Haiku 4.5) |
+| Hardcoded jurisdiction rules in Python (not a real Deel/Remote.com integration) | Live Supabase Postgres for `employees` + `audit_log` |
+| HR policies written as markdown handbook prose (not a Notion/Confluence sync) | Live Pinecone vector store with OpenAI embeddings |
+|  | Live SSE streaming, live prompt caching, live rate limiting |
+|  | Real audit log with cost tracking and four queryable SQL views |
+
+**The mocks are at the *data* layer. The architecture is production-shaped.** Swapping any mock for the real backend (Workday, Deel, Notion API) is a config change in the relevant MCP server — orchestrator, classifier, resolver, audit log, UI, and tests don't change.
 
 ---
 
