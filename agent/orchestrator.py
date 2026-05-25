@@ -482,7 +482,18 @@ async def run_stream(
                 break
 
     except Exception as e:  # noqa: BLE001
-        yield {"type": "error", "message": f"{type(e).__name__}: {e}"}
+        # Capture the full exception chain — ExceptionGroup hides sub-exceptions
+        # behind a generic "1 sub-exception" message otherwise. Useful for
+        # debugging serverless subprocess issues.
+        import traceback
+
+        detail = f"{type(e).__name__}: {e}"
+        if hasattr(e, "exceptions"):
+            for i, sub in enumerate(e.exceptions, 1):
+                detail += f"\n  [sub {i}] {type(sub).__name__}: {sub}"
+        tb_tail = "".join(traceback.format_exc().splitlines()[-5:])
+        detail += f"\n  traceback tail: {tb_tail}"
+        yield {"type": "error", "message": detail}
         # Still try to log the request as failed, then return.
         log_request(
             session_id=session_id,
