@@ -448,6 +448,463 @@ Now scenario B: same employer eliminates 60 positions in one 30-day window.
 
 ---
 
+## United Kingdom (UK)
+
+### Employment relationship overview
+
+UK employment law is primarily statutory, layered over a contractual base. The two key tenure thresholds are (1) 2 years (unlocks unfair dismissal rights and statutory redundancy pay) and (2) the per-year scaling of statutory minimum notice. Probationary periods are contractual and have no special statutory status; statutory notice applies from the start of employment.
+
+#### Legal framework
+
+- **Employment Rights Act 1996 (ERA 1996)** the master statute. Notice in **§86**, unfair dismissal in **§§94–98**, statutory redundancy pay in **§§135, 155, 162**, automatically unfair grounds in **§§99–104**.
+- **Trade Union and Labour Relations (Consolidation) Act 1992 (TULRCA) §188** collective redundancy consultation.
+- **Public Interest Disclosure Act 1998 (PIDA)** whistleblower protection, amending ERA 1996 to make whistleblowing-related dismissal automatically unfair from day one.
+- **Equality Act 2010** discrimination protections (no qualifying period).
+- **ACAS Code of Practice on Disciplinary and Grievance Procedures** non-statutory, but tribunals may uplift compensation by up to 25% for unreasonable failure to follow it.
+
+### Notice period rules
+
+Statutory minimum notice under **ERA 1996 §86**, employer-initiated:
+
+| Tenure | Statutory minimum notice |
+|---|---|
+| <1 month | None |
+| 1 month to <2 years | 1 week |
+| 2 years to <12 years | 1 week per full year of service |
+| 12+ years | 12 weeks (cap) |
+
+```
+# Statutory minimum, employer-initiated
+if tenure_months < 1:           notice_weeks = 0
+elif tenure_years < 2:          notice_weeks = 1
+else:                           notice_weeks = min(int(tenure_years), 12)
+```
+
+- Employee-initiated resignation: statutory minimum is **1 week** after 1 month of service, regardless of tenure (ERA 1996 §86(2)).
+- The contract may specify longer notice (typically 1 to 3 months for professional employees, 3 to 6 months for senior roles); the contractual period applies if it exceeds the statutory minimum.
+- **Payment in lieu of notice (PILON)** is permitted where the contract contains a PILON clause; otherwise, paying in lieu without such a clause is technically a breach of contract (though it rarely generates a claim because the employee is fully compensated). Since April 2018, all PILON payments are taxable as earnings (ITEPA 2003 §402B).
+- **Garden leave** placing the employee on paid leave during their notice period to keep them out of the market is enforceable where the contract permits it.
+
+### Severance and final pay
+
+#### Statutory redundancy pay (ERA 1996 §§135, 162)
+
+Available after **2 years of continuous service** where the dismissal qualifies as redundancy (the role has ceased to exist, the workplace has closed, or the business no longer needs work of that kind). The formula is age-weighted:
+
+```
+# For each full year of service, capped at 20 years (most recent 20)
+years_under_22  = years employed while under age 22
+years_22_to_40  = years employed while aged 22 to 40
+years_41_plus   = years employed while aged 41 or older
+
+statutory_redundancy_pay = (
+    0.5 * weeks_pay * years_under_22 +
+    1.0 * weeks_pay * years_22_to_40 +
+    1.5 * weeks_pay * years_41_plus
+)
+# weeks_pay is capped at the statutory weekly maximum
+# (verify against current government source for the 2026 figure; around £700 as of recent guidance)
+# years_of_service capped at 20
+```
+
+- Only the **most recent 20 years** of service count (ERA 1996 §162(3)).
+- A "week's pay" is capped at the statutory weekly maximum, set annually by the Secretary of State and published in the Employment Rights (Increase of Limits) Order. **Verify against the current government source for the 2026 figure** (recent years have been around £700/week).
+- The statutory minimum is a floor; many employers offer enhanced redundancy on a contractual or discretionary basis.
+- Statutory redundancy pay up to £30,000 is income-tax-free (ITEPA 2003 §403).
+
+#### Final pay components
+
+- Salary through last day worked.
+- Accrued but untaken holiday, paid out under the Working Time Regulations 1998 reg. 14.
+- Statutory redundancy pay if applicable.
+- Any contractual notice pay or PILON.
+- Bonus or commission per contract terms (pro-rata where the contract provides).
+
+There is no general statutory severance outside redundancy. Negotiated exit packages typically use a **settlement agreement** (formerly "compromise agreement") under ERA 1996 §203, which is the only enforceable mechanism for the employee to waive statutory claims and requires independent legal advice paid for by the employer (market-standard contribution: £500 to £750).
+
+### Unfair dismissal
+
+#### Qualifying period and grounds
+
+- **2 years of continuous service** required to bring an ordinary unfair dismissal claim (ERA 1996 §108(1)).
+- **No qualifying period** for "automatically unfair" dismissals: pregnancy/maternity (§99), trade union activity (§152 TULRCA), whistleblowing (§103A, via PIDA 1998), health and safety activities (§100), assertion of statutory rights (§104), part-time worker discrimination (Part-time Workers Regulations 2000), or any Equality Act 2010 protected characteristic.
+- Five potentially fair reasons under **ERA 1996 §98(2)**: capability, conduct, redundancy, statutory restriction (continued employment would breach a statute), and "some other substantial reason" (SOSR).
+- The employer must show (a) the reason falls within one of these five categories and (b) it acted reasonably in treating that reason as sufficient for dismissal (§98(4)). Tribunals apply the "range of reasonable responses" test (*British Home Stores v Burchell* [1978] IRLR 379, *Iceland Frozen Foods v Jones* [1982] IRLR 439).
+
+#### Process expectations
+
+- The ACAS Code of Practice sets out the expected procedure: investigation, written allegations, hearing, decision, right of appeal. Failure to follow it can result in a tribunal uplift of compensation by up to 25% (TULRCA 1992 §207A).
+- **ACAS Early Conciliation** is a mandatory pre-claim step: the employee must notify ACAS before issuing a tribunal claim (Employment Tribunals Act 1996 §18A).
+
+#### Remedies (ERA 1996 §§112–117, §124)
+
+- **Reinstatement or re-engagement** rarely ordered in practice.
+- **Compensation:** a basic award (calculated like statutory redundancy pay) plus a compensatory award capped at the lower of one year's gross pay or the statutory cap (**verify against current government source for the 2026 figure**, recently around £115,000). The cap does not apply to automatically unfair dismissals on whistleblowing or discrimination grounds.
+
+### Collective redundancy
+
+Under **TULRCA 1992 §188**, where an employer proposes to dismiss as redundant **20 or more employees at one establishment within a 90-day period**, statutory consultation is required:
+
+| Proposed redundancies (90-day window) | Minimum consultation period |
+|---|---|
+| 20 to 99 | 30 days before the first dismissal takes effect |
+| 100+ | 45 days before the first dismissal takes effect |
+
+- Consultation is with appropriate representatives (recognised trade union, or elected employee representatives if no union).
+- Notification to the Secretary of State (via the BEIS form HR1) is required at the same time. Failure to notify is a criminal offence.
+- Failure to consult exposes the employer to a **protective award** of up to 90 days' gross pay per affected employee (TULRCA §189), in addition to ordinary unfair dismissal liability.
+
+### Edge cases
+
+- **Protected categories blocking ordinary dismissal:** pregnancy/maternity (ERA 1996 §99), trade union membership and activity (TULRCA §152), whistleblowing (PIDA 1998, ERA §103A), part-time worker status (Part-time Workers Regulations 2000), fixed-term worker status (Fixed-term Employees Regulations 2002), assertion of statutory rights (ERA §104), jury service, working time complaints. Dismissal for any of these is automatically unfair with no qualifying period.
+- **TUPE (Transfer of Undertakings (Protection of Employment) Regulations 2006)** dismissals connected to a relevant transfer are automatically unfair unless for an ETO reason (economic, technical, or organisational entailing changes in the workforce).
+- **Wrongful dismissal** distinct from unfair dismissal; a contract-law claim for breach of notice provisions. No qualifying period and no statutory cap, but damages are limited to the notice period the employer should have given. Can be brought in the High Court or Employment Tribunal (tribunal cap of £25,000 applies).
+- **Summary dismissal** dismissal without notice for gross misconduct. Permitted at common law; still subject to the unfair dismissal regime if the employee has 2+ years of service.
+
+### Worked example
+
+Scenario: full-time UK employee, **6 years 4 months tenure**, age 44, weekly pay £900 (above the statutory weekly cap), made redundant on operational grounds. No collective redundancy threshold triggered (single dismissal).
+
+1. Statutory minimum notice: tenure 6 years → **6 weeks** (ERA 1996 §86).
+2. Contractual notice (typical professional contract): 3 months. The longer applies → **3 months notice**, paid as PILON.
+3. Statutory redundancy pay (ERA 1996 §162):
+   - All 6 full years were worked while aged 22 to 40 (age 38 to 44 over the period). Years split: 2 years at ages 38 to 40 (factor 1.0) + 4 years at ages 41 to 44 (factor 1.5).
+   - Week's pay capped at statutory weekly maximum (**verify against current government source for the 2026 figure**; assume £700 for this worked example).
+   - Computation: `(1.0 * 700 * 2) + (1.5 * 700 * 4)` = `1,400 + 4,200` = **£5,600**.
+4. Accrued holiday payout: assume 8 untaken days at £900/5 = £180/day → **£1,440** (Working Time Regulations 1998 reg. 14).
+5. PILON: 3 months × £900 × 52/12 = **£11,700** (taxable as earnings under ITEPA 2003 §402B).
+6. Total exit cost: approximately **£18,740**. Statutory redundancy element (£5,600) is income-tax-free up to £30,000.
+
+If the employer had skipped consultation and the dismissal had been one of 25 at the same establishment in a 90-day window, TULRCA §188 would have applied: 30-day consultation period plus a potential protective award of up to 90 days' pay per affected employee.
+
+### Sources
+
+- legislation.gov.uk **Employment Rights Act 1996**: <https://www.legislation.gov.uk/ukpga/1996/18/contents>
+- legislation.gov.uk **Trade Union and Labour Relations (Consolidation) Act 1992**: <https://www.legislation.gov.uk/ukpga/1992/52/contents>
+- legislation.gov.uk **Public Interest Disclosure Act 1998**: <https://www.legislation.gov.uk/ukpga/1998/23/contents>
+- legislation.gov.uk **Equality Act 2010**: <https://www.legislation.gov.uk/ukpga/2010/15/contents>
+- GOV.UK **Calculate your statutory redundancy pay**: <https://www.gov.uk/calculate-your-redundancy-pay>
+- GOV.UK **Notice periods**: <https://www.gov.uk/handing-in-your-notice>
+- ACAS **Code of Practice on Disciplinary and Grievance Procedures**: <https://www.acas.org.uk/acas-code-of-practice-on-disciplinary-and-grievance-procedures>
+- ACAS **Redundancy guidance**: <https://www.acas.org.uk/redundancy>
+- *British Home Stores v Burchell* [1978] IRLR 379
+- *Iceland Frozen Foods v Jones* [1982] IRLR 439
+- Baker McKenzie *Global Employer Guide: United Kingdom*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: United Kingdom*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+
+---
+
+## France (FR)
+
+### Employment relationship overview
+
+French employment law combines a strongly protective statutory base (Code du travail) with industry-wide collective bargaining agreements (conventions collectives nationales, CCN) that frequently extend statutory minima. Almost every employee is covered by a CCN, and the engine must treat the CCN as potentially overriding the statutory floor (always in the employee's favour). Employee category (cadre / non-cadre) drives many of the statutory thresholds.
+
+#### Legal framework
+
+- **Code du travail** the master labour code. Key articles: **Art. L1221-19 to L1221-26** (période d'essai), **Art. L1232-2 to L1232-6** (entretien préalable and procedure), **Art. L1234-1 and L1234-9** (notice and indemnité de licenciement), **Art. L1233-3 to L1233-90** (licenciement économique), **Art. L1235-1 to L1235-17** (sanctions and Macron scale).
+- **Conventions collectives nationales (CCN)** binding sectoral agreements (Syntec, Métallurgie, etc.) that typically extend statutory minima.
+- **Ordonnance Macron du 22 septembre 2017 (n° 2017-1387)** introduced the indemnity scale (barème Macron) for unfair dismissal (licenciement sans cause réelle et sérieuse).
+- **Conseil de prud'hommes** the employment tribunal of first instance; appeals to the Cour d'appel chambre sociale and ultimately the Cour de cassation.
+
+### Période d'essai (probationary period)
+
+The probation period must be in writing in the contract; it is not implied. Statutory maxima under **Art. L1221-19**:
+
+| Employee category | Initial period | Maximum with renewal |
+|---|---|---|
+| Ouvriers / employés | 2 months | 4 months |
+| Agents de maîtrise / techniciens | 3 months | 6 months |
+| Cadres | 4 months | 8 months |
+
+- Renewal must be expressly permitted by the applicable CCN and accepted in writing by the employee before the initial period expires (Cour de cassation, Soc. 25 février 2009, n° 07-40.155).
+- During période d'essai, either party may terminate without cause and without indemnité de licenciement, subject to a short statutory **délai de prévenance** (warning period) scaling with tenure (Art. L1221-25): from 24 hours if employed less than 8 days, up to 1 month if employed 3+ months.
+- KSchG-style social justification does **not** apply during période d'essai. The procedure remains lighter, though abuse of right (rupture abusive) remains actionable.
+
+### Notice period rules (post-période d'essai)
+
+Statutory minimum notice under **Art. L1234-1** for employer-initiated termination outside gross misconduct:
+
+| Employee category | Tenure 6 months to <2 years | Tenure >=2 years |
+|---|---|---|
+| Non-cadre | 1 month | 2 months |
+| Cadre | Typically 3 months by CCN | Typically 3 months by CCN |
+
+- For non-cadres, the statute itself sets 1 month (6 mo to <2 yrs) and 2 months (≥2 yrs).
+- For cadres, the Code du travail does not set a statutory cadre-specific period; the **3-month standard is set by industry-wide CCN** (e.g., Syntec for digital/consulting; the Convention collective nationale des cadres of 14 mars 1947 historically governed). The engine must treat 3 months as market-standard practice for cadres, with a flag to verify against the applicable CCN.
+- The contract or CCN can lengthen these periods but cannot shorten them.
+- Notice may be worked or indemnified (indemnité compensatrice de préavis), at the employer's discretion (Art. L1234-5).
+
+### Indemnité de licenciement (statutory severance)
+
+Available after **8 months of continuous service** under **Art. L1234-9** (threshold reduced from 1 year by the 2017 Macron ordonnances). Statutory minimum formula under **Art. R1234-2**:
+
+```
+indemnite_licenciement = (
+    (1/4) * monthly_salary_de_reference * min(years_of_service, 10) +
+    (1/3) * monthly_salary_de_reference * max(years_of_service - 10, 0)
+)
+# monthly_salary_de_reference is the higher of:
+#   (a) average gross monthly salary over the 12 months preceding the termination notice
+#   (b) one-third of the gross salary over the last 3 months (annualised), counting bonuses pro-rata
+```
+
+- 1/4 month per year for the first 10 years, 1/3 month per year thereafter.
+- Pro-rata for incomplete years (the calculation runs in months, not just full years).
+- The applicable CCN frequently provides a more generous formula; the more generous applies.
+- The indemnité is income-tax-free within statutory limits (Code général des impôts Art. 80 duodecies); above those limits it becomes taxable.
+- Not payable for licenciement pour faute grave or faute lourde (Art. L1234-9 by exclusion).
+
+### Termination procedure
+
+Every termination of an indefinite-term contract (CDI), regardless of grounds, requires the following procedure. Skipping any step exposes the employer to procedural unfairness damages even where substantive grounds are valid.
+
+1. **Convocation à un entretien préalable** (Art. L1232-2): written notice by registered letter or hand-delivered against receipt, summoning the employee to a preliminary interview. Minimum **5 working days advance notice** between receipt of the convocation and the interview. Letter must state the purpose, date, time, place, and the employee's right to be assisted (by a coworker, or by a conseiller du salarié if there is no CSE in the firm).
+2. **Entretien préalable** (Art. L1232-3): the employer states the grounds being considered and hears the employee's response. No decision may be communicated at the interview itself.
+3. **Notification du licenciement** (Art. L1232-6): minimum **2 working days after the interview**, by registered letter with acknowledgement of receipt. The letter must state the precise grounds for dismissal; subsequent litigation is confined to the grounds set out in this letter (Cass. Soc., principe de fixation des motifs).
+4. **Notice period** begins on receipt of the dismissal letter and runs through the dates set by Art. L1234-1 or the CCN.
+
+For **licenciement économique** (economic grounds: redundancy), additional steps apply: CSE (Comité Social et Économique) consultation, priority-of-rehiring obligations, and where applicable a PSE (see below).
+
+### Grounds for termination
+
+- **Licenciement pour motif personnel** (Art. L1232-1): personal grounds. Subdivides into:
+  - **Faute simple / sérieuse** misconduct warranting dismissal with notice and indemnité.
+  - **Faute grave** misconduct so serious that continued employment is impossible; no notice, no indemnité, but accrued vacation still paid.
+  - **Faute lourde** misconduct with intent to harm the employer; same as faute grave plus potential civil damages.
+  - **Insuffisance professionnelle** inadequate performance, not misconduct. Notice and indemnité owed.
+  - **Inaptitude médicale** medical incapacity certified by occupational health; specific reclassification obligations apply.
+- **Licenciement pour motif économique** (Art. L1233-3): economic grounds. Definition expanded by the 2017 Macron ordonnances to include economic difficulties, technological change, reorganisation needed to safeguard competitiveness, and cessation of activity.
+
+### Plan de sauvegarde de l'emploi (PSE)
+
+Under **Art. L1233-61**, a PSE is mandatory for collective economic redundancies of **10 or more employees within a 30-day period at a firm with 50 or more employees**. The PSE must include:
+
+- Concrete measures to avoid or limit dismissals (internal redeployment, reduced hours, training).
+- Reclassement (redeployment) measures within the group, including international where applicable.
+- Outplacement support (cellule de reclassement, congé de reclassement).
+- A consultation procedure with the CSE.
+
+The PSE must be either negotiated with trade unions (accord collectif majoritaire) or unilaterally drawn up by the employer and validated/approved by the **DREETS** (Direction régionale de l'économie, de l'emploi, du travail et des solidarités). Without an approved PSE, individual dismissals in the collective procedure are null (Art. L1235-10).
+
+### Unfair dismissal and the barème Macron
+
+Where the Conseil de prud'hommes finds the dismissal to be without cause réelle et sérieuse, indemnities are set on the **barème Macron** scale codified at **Art. L1235-3**:
+
+- Floor and ceiling expressed in months of gross salary, varying by tenure (e.g., 1 year tenure: 1 to 2 months; 10 years: 3 to 10 months; 30+ years: 3 to 20 months).
+- This scale is binding on labour courts since 2017; the Cour de cassation upheld its conformity with international labour standards (Cass. Soc. 11 mai 2022, n° 21-14.490).
+- The scale does **not** apply to dismissals tainted by discrimination, harassment, breach of fundamental freedoms, or violation of protected status (pregnancy, whistleblowing, etc.), where indemnities remain uncapped (minimum 6 months) under Art. L1235-3-1.
+- Statute of limitations to bring a claim before the Conseil de prud'hommes: **12 months** from notification of the dismissal (Art. L1471-1).
+
+### Edge cases
+
+- **Salariés protégés** (protected employees): CSE members, union delegates, conseillers du salarié, conseillers prud'hommes. Termination requires prior authorisation from the Inspection du travail (Art. L2411-1 et seq.). Failure to obtain authorisation makes the dismissal automatically null.
+- **Pregnant employees and maternity leave** (Art. L1225-4): termination is prohibited during pregnancy, maternity leave, and the 10 weeks following return. Exceptions narrowly limited to faute grave unconnected to pregnancy or impossibility of maintaining the contract for reasons unconnected to pregnancy.
+- **Inaptitude médicale**: where occupational health certifies inaptitude, the employer must search for reclassement options before any dismissal can proceed (Art. L1226-2 for non-occupational, L1226-10 for occupational origin).
+- **Rupture conventionnelle** (Art. L1237-11 et seq.): negotiated mutual termination, separate from licenciement. Requires at least one interview, a written agreement, a 15-day withdrawal period for each party, and DREETS homologation. Employee receives at minimum the indemnité de licenciement and retains unemployment benefits. Increasingly common in practice as a faster, lower-litigation alternative.
+- **CDD (fixed-term contract) early termination**: only permitted for faute grave, force majeure, mutual agreement, inaptitude, or where the employee has secured a CDI elsewhere (Art. L1243-1). Unjustified early termination by the employer owes the employee all remaining salary through the original term plus indemnité de fin de contrat.
+
+### Worked example
+
+Scenario: cadre (manager) in a 200-employee firm, **6 years tenure**, monthly gross salary EUR 5,500 (no significant variable comp), licenciement pour motif personnel (insuffisance professionnelle), procedure followed correctly.
+
+1. **Convocation à entretien préalable** sent 13 May, interview held 22 May (more than 5 working days). Dismissal letter sent 26 May (more than 2 working days after the interview).
+2. **Notice period (cadre, ≥2 yrs tenure)**: 3 months by CCN (Syntec assumed) → notice runs 26 May to 26 August 2026.
+3. **Indemnité de licenciement** (Art. R1234-2):
+   - Tenure: 6 years. Salaire de référence: EUR 5,500/month.
+   - `(1/4) * 5500 * 6` = `1375 * 6` = **EUR 8,250**.
+4. **Indemnité compensatrice de congés payés**: assume 12 days of acquired but untaken leave at EUR 5500 × 12 / 217 working days ≈ EUR 304/day → **EUR 3,650**.
+5. **Notice paid as worked** (no PILON in this scenario): 3 months × EUR 5,500 = **EUR 16,500** as ordinary salary.
+6. Total exit cost: approximately **EUR 28,400**, plus social charges on the salary components.
+
+If the employee had then filed at the Conseil de prud'hommes and succeeded in having the dismissal qualified as sans cause réelle et sérieuse, the barème Macron for 6 years tenure would set additional damages at between roughly 3 and 7 months of gross salary, on top of the indemnité de licenciement already paid.
+
+### Sources
+
+- Legifrance **Code du travail**: <https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006072050/>
+- Legifrance **Art. L1234-1 (préavis)**: <https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000019071190>
+- Legifrance **Art. L1234-9 (indemnité de licenciement)**: <https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000035644154>
+- Legifrance **Art. R1234-2 (calcul de l'indemnité)**: <https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000036482086>
+- Legifrance **Art. L1232-2 et seq. (procédure)**: <https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006072050/LEGISCTA000006177833/>
+- Legifrance **Art. L1233-61 (PSE)**: <https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000036762105>
+- Legifrance **Art. L1235-3 (barème Macron)**: <https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000036762052>
+- Ministère du Travail **Le licenciement pour motif personnel**: <https://travail-emploi.gouv.fr/le-licenciement-pour-motif-personnel>
+- Ministère du Travail **Le licenciement pour motif économique**: <https://travail-emploi.gouv.fr/le-licenciement-pour-motif-economique>
+- Cass. Soc. 11 mai 2022, n° 21-14.490 (conformité du barème Macron)
+- Cass. Soc. 25 février 2009, n° 07-40.155 (renouvellement de la période d'essai)
+- Baker McKenzie *Global Employer Guide: France*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: France*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+
+---
+
+## Spain (ES)
+
+### Employment relationship overview
+
+Spanish employment law is codified in the **Estatuto de los Trabajadores** (Workers' Statute, Royal Legislative Decree 2/2015), with sectoral collective bargaining agreements (convenios colectivos) overlaying the statute. The core distinction in termination is between **despido objetivo** (objective dismissal, with severance), **despido disciplinario** (disciplinary dismissal, no severance if upheld), and **despido improcedente** (unfair dismissal, higher severance). Procedure is heavily formalised: a carta de despido (written dismissal letter) is mandatory for every dismissal, and the SMAC conciliation step precedes any tribunal claim.
+
+#### Legal framework
+
+- **Estatuto de los Trabajadores (ET)** Real Decreto Legislativo 2/2015, de 23 de octubre. Key articles: **Art. 49** (causes of termination), **Art. 51** (despido colectivo), **Art. 52 to 53** (despido objetivo), **Art. 54 to 55** (despido disciplinario), **Art. 56** (despido improcedente), **Art. 14** (período de prueba).
+- **Ley Reguladora de la Jurisdicción Social (LRJS)** Ley 36/2011, governing labor court procedure.
+- **Ley 3/2012, de 6 de julio** the 2012 labour reform that reduced unfair-dismissal severance from 45 to 33 days per year of service for service accruing from 12 February 2012.
+- **SMAC** (Servicio de Mediación, Arbitraje y Conciliación, regionally named e.g., SMAC, CMAC, UMAC) mandatory conciliation step before filing in the Juzgado de lo Social.
+- **Juzgado de lo Social** labor court of first instance; appeals to the Sala de lo Social of the Tribunal Superior de Justicia and ultimately the Tribunal Supremo.
+
+### Período de prueba (probationary period)
+
+Under **Art. 14 ET**, the probation period must be in writing and respect the maxima set by the applicable convenio colectivo; statutory defaults where the convenio is silent:
+
+- **Técnicos titulados** (qualified technical staff): up to 6 months.
+- **Other employees**: up to 2 months (or 3 months in companies of fewer than 25 employees).
+- During período de prueba, either party may terminate without cause and without indemnización, subject only to good faith.
+
+### Notice period rules
+
+- **Despido objetivo** (Art. 53.1.c ET): **15 calendar days** advance written notice from the date of the carta de despido to the effective termination date. If the employer skips the notice, the carta remains valid but the employer owes 15 days of salary in lieu (Art. 53.4 hands of the courts).
+- **Despido disciplinario** (Art. 55 ET): **no statutory notice period**. Effective immediately on delivery of the carta de despido.
+- **Despido colectivo** (Art. 51 ET): no individual notice as such, but the consultation period (período de consultas) of 15 to 30 days precedes any dismissal.
+- **Employee resignation (baja voluntaria)**: notice period set by the convenio colectivo, typically 15 days for non-management roles. Failure to give notice exposes the employee to damages equal to the missed notice days.
+
+### Severance and final pay
+
+#### Despido objetivo (Art. 53 ET)
+
+Available where the employer can demonstrate one of the Art. 52 grounds: incapacity discovered post-hire, failure to adapt to technical changes, economic / technical / organisational / production reasons (causas ETOP), or excessive justified absences (since constitutional revision of Art. 52.d).
+
+```
+indemnizacion_despido_objetivo = (
+    20 * daily_salary * years_of_service
+)
+# Capped at 12 monthly salaries (Art. 53.1.b ET)
+# Pro-rata for incomplete years (full periods in months, not just full years)
+# daily_salary = (annual_gross_including_pro_rata_bonuses) / 365
+```
+
+- **20 days of salary per year of service**, capped at **12 monthly salaries**.
+- Severance paid simultaneously with delivery of the carta de despido (Art. 53.1.b). Failure to put the severance at the employee's disposal at the moment of notification renders the despido improcedente by formal defect (Tribunal Supremo, Sala de lo Social, doctrina consolidada; partial exception where the employer alleges and proves a lack of liquidity for ETOP causes).
+- Plus **15 calendar days notice** or pay in lieu (Art. 53.1.c).
+
+#### Despido disciplinario (Art. 54 to 55 ET)
+
+For serious and culpable misconduct: repeated unjustified absences, indiscipline, verbal or physical abuse, breach of contractual good faith, drug or alcohol use affecting work, harassment, etc. (exhaustive list at Art. 54.2).
+
+- **Upheld (procedente)**: **no severance, no notice**. Employee receives only finiquito (settlement of salary through last day worked plus accrued vacation and pro-rata extra payments).
+- **Reduced to unfair (improcedente)**: see Art. 56 below.
+
+#### Despido improcedente (Art. 56 ET)
+
+When the despido is found procedurally or substantively defective by the Juzgado de lo Social, or when the employer recognises improcedencia from the outset:
+
+```
+indemnizacion_despido_improcedente = (
+    33 * daily_salary * years_after_12_feb_2012 +
+    45 * daily_salary * years_before_12_feb_2012
+)
+# Service before 12 February 2012 retains the pre-reform 45-days rate.
+# Combined cap: the lower of (a) 720 days' salary (24 months) for post-reform service alone,
+# or (b) the amount that would have applied under the pre-reform formula for hires before 12 Feb 2012,
+# with absolute ceiling of 42 monthly salaries for legacy hires (Disposición transitoria 11ª).
+```
+
+- **33 days of salary per year of service** for service from 12 February 2012, capped at **24 monthly salaries**.
+- For employees hired **before 12 February 2012**, the pre-reform **45 days per year** rate continues to apply to service accrued before that date, then 33 days for service after; the combined indemnity is capped at 42 monthly salaries (or 720 days, whichever is more favourable, under Disposición transitoria 11ª ET).
+- Following a finding of improcedencia, the employer (or in some statutorily defined cases the employee, e.g., union representatives) elects within 5 days between (a) paying the indemnización and confirming the termination, or (b) reinstating the employee with back-pay of "salarios de tramitación" from dismissal to reinstatement (Art. 56.2).
+- No notice owed separately when improcedencia is paid.
+
+#### Despido nulo
+
+Reserved for dismissals tainted by discrimination, violation of fundamental rights, or in respect of protected categories (pregnancy, maternity leave, parental leave, victims of gender violence, etc., under Art. 55.5 ET). Consequence: **mandatory reinstatement** with back-pay; the employer has no option to pay indemnización instead.
+
+#### Finiquito
+
+The settlement document signed at termination, covering:
+
+- Salary through the last day worked.
+- Pro-rata extra payments (pagas extraordinarias) the standard Spanish 14-payment structure means employees accrue summer and Christmas extra payments throughout the year; the unaccrued portion is paid out at termination.
+- Vacation accrued but untaken (Art. 38 ET).
+- Any severance owed.
+
+Signing the finiquito with a "saldo y finiquito" clause can have a settlement effect; employees frequently sign "no conforme" to preserve the right to challenge.
+
+### Termination procedure
+
+Every dismissal requires a **carta de despido** under **Art. 53.1.a (objetivo) and Art. 55.1 (disciplinario)** containing:
+
+1. The precise grounds for dismissal (specific facts, dates, and where applicable the ET article invoked).
+2. The effective date of termination.
+3. For despido objetivo: simultaneous tender of the severance and the 15-day notice.
+
+The employer is locked into the grounds stated in the carta; new grounds raised later in litigation are inadmissible (principio de invariabilidad de la causa). Procedural defects in the carta (missing grounds, vague description, wrong date) typically result in a finding of improcedencia.
+
+Before any litigation, the **SMAC conciliation step is mandatory** under LRJS Art. 63. The employee must submit a papeleta de conciliación within **20 working days** of the dismissal (Art. 59.3 ET) this is the statute of limitations for filing a despido claim. Failing or unsuccessful conciliation, the claim proceeds to the Juzgado de lo Social.
+
+### Despido colectivo (Art. 51 ET)
+
+Collective dismissal thresholds within a **90-day period**:
+
+| Firm size | Threshold for collective dismissal |
+|---|---|
+| <100 employees | 10 employees dismissed |
+| 100 to 300 employees | 10% of the workforce dismissed |
+| >300 employees | 30 employees dismissed |
+
+Additionally, any dismissal of the entire workforce affecting more than 5 employees is treated as collective regardless of firm size.
+
+- Triggers a mandatory **período de consultas** with worker representatives lasting **15 days** (firms under 50 employees) or **30 days** (firms of 50+).
+- Notification to the labour authority (Autoridad Laboral) at the start of the período de consultas.
+- During consultation, the employer must provide a substantial information dossier including causes, criteria for selection of affected employees, redeployment measures, and outplacement plan.
+- The statutory floor of 20 days per year of service / 12-month cap applies to each affected employee (same as despido objetivo); convenios colectivos frequently negotiate enhanced packages.
+- A negotiated agreement at the end of the período de consultas is binding; absent agreement, the employer may proceed but exposes itself to enhanced judicial scrutiny.
+
+### Edge cases
+
+- **Protected categories under Art. 55.5 ET**: pregnancy, maternity / paternity leave, breastfeeding leave, parental leave, victims of gender-based violence, and reinstatement following maternity for up to 12 months. Dismissal of these employees is **nulo** (mandatory reinstatement) unless the employer proves a cause wholly unconnected to the protected status.
+- **Union representatives and works council members**: enhanced protection under Art. 68.c ET, with priority in any redundancy selection and additional procedural safeguards. Dismissal opens a contradictory expediente (internal procedure) where the employer must hear the representative and the other members of the body.
+- **Fixed-term contracts (contratos de duración determinada)** since the 2021 reform (Real Decreto-ley 32/2021), fixed-term contracts are restricted to specific objective causes (production-related or substitution) and improperly used FTCs are deemed indefinidos.
+- **Statute of limitations**: 20 working days from the effective date of dismissal to file the papeleta de conciliación at SMAC (Art. 59.3 ET). This is a hard caducidad (forfeiture) deadline, not prescripción; missing it extinguishes the claim entirely.
+- **Pro-rata for part-time employees**: Art. 12.4 ET prorates severance entitlements by hours worked relative to a comparable full-time employee. The 20-days-per-year and 33-days-per-year formulas use the part-time salary directly, so proration is implicit through the daily salary input.
+
+### Worked example
+
+Scenario: full-time Spanish employee, **5 years 6 months tenure**, monthly gross salary EUR 3,200 (14 payments = EUR 44,800 annual gross), dismissed via despido objetivo for economic causes (causa ETOP). Hired in 2020 (entirely post-12-Feb-2012 service).
+
+1. **Carta de despido** delivered on 1 June 2026 stating economic causes, 15 days notice, severance tendered simultaneously with the carta. Effective termination date: 16 June 2026.
+2. **Daily salary**: EUR 44,800 / 365 = approximately **EUR 122.74/day**.
+3. **Indemnización despido objetivo** (Art. 53.1.b):
+   - 5.5 years × 20 days = 110 days of salary.
+   - 110 × 122.74 = **EUR 13,501**.
+   - Cap check: 12 monthly salaries = EUR 38,400. Below cap, full amount payable.
+4. **15 days notice paid as worked**: salary through 16 June.
+5. **Finiquito**:
+   - Salary through 16 June.
+   - Pro-rata summer extra payment (paga extraordinaria de verano), accrued January through June: approximately EUR 1,600.
+   - Vacation accrued but untaken: assume 8 days at EUR 122.74 = **EUR 982**.
+6. Total exit cost: approximately **EUR 17,650** including severance, accrued extras, and vacation; plus the worked notice period salary.
+
+Now scenario B: same employee, but the Juzgado de lo Social finds the economic causa was not adequately substantiated and qualifies the despido as improcedente.
+
+1. **Indemnización despido improcedente** (Art. 56):
+   - 5.5 years × 33 days = 181.5 days of salary.
+   - 181.5 × 122.74 = **EUR 22,277**.
+   - Cap check: 24 monthly salaries = EUR 76,800. Below cap.
+2. The employer elects to pay the indemnización and confirm the termination (the typical choice for individual contributor roles). Difference owed beyond the EUR 13,501 already paid as despido objetivo: approximately **EUR 8,776**.
+3. No back-pay (salarios de tramitación) owed because the employer elected indemnización rather than reinstatement.
+
+### Sources
+
+- BOE **Real Decreto Legislativo 2/2015 (Estatuto de los Trabajadores)**: <https://www.boe.es/buscar/act.php?id=BOE-A-2015-11430>
+- BOE **Ley 36/2011 (LRJS)**: <https://www.boe.es/buscar/act.php?id=BOE-A-2011-15936>
+- BOE **Ley 3/2012, de 6 de julio (reforma laboral)**: <https://www.boe.es/buscar/act.php?id=BOE-A-2012-9110>
+- BOE **Real Decreto-ley 32/2021 (reforma de la contratación temporal)**: <https://www.boe.es/buscar/act.php?id=BOE-A-2021-21788>
+- Ministerio de Trabajo y Economía Social **Extinción del contrato de trabajo**: <https://www.mites.gob.es/es/Guia/texto/guia_5/contenidos/guia_5_15_1.htm>
+- Tribunal Supremo, Sala de lo Social doctrina sobre puesta a disposición de la indemnización (e.g., STS 17 enero 2011, rec. 4314/2009).
+- Baker McKenzie *Global Employer Guide: Spain*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: Spain*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+- Cuatrecasas *Despidos colectivos en España*: <https://www.cuatrecasas.com/es/spain/employment/>
+
+---
+
 ## Engine integration notes
 
 The rules engine in `mcp_servers/jurisdiction_server.py` should expose the following deterministic outputs derived from this document:
