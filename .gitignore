@@ -16,8 +16,12 @@ build/
 
 # Environment
 .env
+.env.example
 .env.local
 .env.*.local
+
+# Project-internal notes (kept local only, not pushed to public repo)
+CLAUDE.md
 
 # IDE
 .vscode/
