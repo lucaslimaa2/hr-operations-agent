@@ -155,7 +155,15 @@ git clone https://github.com/lucaslimaa2/hr-operations-agent.git
 cd hr-operations-agent
 uv sync
 
-cp .env.example .env  # fill in your keys
+# Create a .env file at the project root with these keys:
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   OPENAI_API_KEY=sk-proj-...
+#   SUPABASE_URL=https://<project>.supabase.co
+#   SUPABASE_KEY=<service-role key>
+#   SUPABASE_DB_URL=postgresql://postgres:<password>@db.<project>.supabase.co:5432/postgres
+#   SUPABASE_DB_POOLER_URL=postgresql://postgres.<project>:<password>@<region>.pooler.supabase.com:6543/postgres
+#   PINECONE_API_KEY=pcsk_...
+#   PINECONE_INDEX=hr-policies
 
 # One-time setup: apply schema via Supabase SQL editor (db/schema.sql)
 # Create Pinecone index 'hr-policies' (1536 dims, cosine, serverless)
@@ -252,7 +260,6 @@ db/
 
 ## Cross-references
 
-- [`CLAUDE.md`](CLAUDE.md): original project spec and non-negotiable design rules
 - [`docs/jurisdiction.md`](docs/jurisdiction.md): labor-law reference, every rule cited to primary statute
 - [`docs/roadmap.md`](docs/roadmap.md): phase plan with current status and per-phase defensible decisions
 - [`docs/policies/`](docs/policies/): HR policy markdown corpus (5 docs)
