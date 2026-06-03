@@ -158,8 +158,12 @@ tell me a joke" is OUT-OF-SCOPE. Set in_scope=false, agents_required=[].
 
 The downstream servers available are:
   - jurisdiction: labor-law rules engine (notice periods, severance, compliance) \
-for BR, DE, US-CA. Use for any question about termination rules, what's allowed, \
-notice/severance amounts, or country-specific labor law.
+with deterministic coverage for BR (CLT, PJ), DE, US-CA, US-TX, US-NY, UK, FR \
+(cadre, non-cadre), ES, IT, SG, and ZA. Japan (JP) and India (IN) return a \
+documented "not covered" response that includes the regulatory rationale; route \
+them here anyway so the user gets the structured refusal. Use for any question \
+about termination rules, what's allowed, notice/severance amounts, or \
+country-specific labor law.
   - hris: employee records (name lookup, employment status, country, tenure). \
 Use whenever a specific employee is mentioned by name or ID.
   - policy: company HR policies (offboarding process, approval matrices, comp \
