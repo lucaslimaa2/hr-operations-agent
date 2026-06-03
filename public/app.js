@@ -32,13 +32,14 @@ document.querySelectorAll(".suggest").forEach((btn) => {
   });
 });
 
-// Wire up the test-dataset rows: clicking one drafts a starter question
-// using the employee's name and collapses the disclosure for cleanliness.
+// Wire up the test-dataset rows: each row has its own data-prompt tailored
+// to the edge case that employee was seeded for. Clicking pre-fills the
+// input and collapses the disclosure for clean focus on the input.
 document.querySelectorAll(".dataset-row").forEach((row) => {
   row.addEventListener("click", () => {
-    const name = row.dataset.name;
-    if (!name) return;
-    input.value = `Look up ${name} and walk me through what applies if we terminate them.`;
+    const prompt = row.dataset.prompt;
+    if (!prompt) return;
+    input.value = prompt;
     input.focus();
     const details = document.getElementById("dataset");
     if (details) details.open = false;
