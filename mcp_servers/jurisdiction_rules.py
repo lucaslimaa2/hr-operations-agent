@@ -18,6 +18,8 @@ Coverage:
   - IT            (Codice Civile Art. 2118 notice via CCNL, Art. 2120 TFR; Jobs Act / Art. 18 split)
   - SG            (Employment Act §10 tenure brackets, MOM tripartite retrenchment norm)
   - ZA            (BCEA §37 notice, BCEA §41 severance, LRA §188 fair-reason + fair-procedure)
+  - US-TX         (Texas at-will; Texas Payday Law 6-day rule; federal WARN only)
+  - US-NY         (NY at-will; NY Labor Law §191 next-payday; NY WARN broader than federal)
 
 Any other country resolves to a "not covered" response — see
 UNCOVERED_COUNTRIES_MESSAGE. This is deliberate: per the architectural
@@ -1362,6 +1364,223 @@ ZA_FULL_TIME = JurisdictionRule(
 )
 
 
+# -----------------------------------------------------------------------------
+# United States — Texas
+# Source: docs/jurisdiction.md §"United States — Texas (US-TX)"
+#
+# At-will. No statutory severance. Federal WARN applies (no state WARN
+# supplement, unlike CA and NY). Final pay: 6 calendar days for involuntary
+# termination (Texas Labor Code §61.014(a)); next payday for resignation.
+# -----------------------------------------------------------------------------
+
+US_TX_FULL_TIME = JurisdictionRule(
+    country="US-TX",
+    employment_type="full-time",
+    legal_framework=(
+        "At-will common-law doctrine; Texas Labor Code §61 (Payday Law); "
+        "Texas Labor Code Chapter 21 (TCHRA, state anti-discrimination, 15+ employees); "
+        "Texas Labor Code §451.001 (workers' comp retaliation); "
+        "Federal: Title VII, ADEA, ADA, federal WARN Act (29 USC §§2101-2109). "
+        "No state WARN supplement (unlike CA and NY). "
+        "Sabine Pilot doctrine (Tex. 1985) is the only narrow common-law public-policy exception."
+    ),
+    employer_notice=NoticeRule(
+        base_days=0,
+        description=(
+            "At-will: no statutory notice required for individual terminations. "
+            "EXCEPTION: federal WARN requires 60 days advance notice for qualifying mass layoffs."
+        ),
+        citation="At-will common law; federal WARN 29 USC §§2101-2109",
+    ),
+    employee_notice=NoticeRule(
+        base_days=0,
+        description="At-will: no statutory notice required from employee.",
+        citation="At-will common law",
+    ),
+    severance_components=(
+        SeveranceComponent(
+            name="Earned wages through last hour worked",
+            formula="hourly_or_salaried_wages_through_termination",
+            citation="Texas Labor Code §61.014",
+        ),
+        SeveranceComponent(
+            name="Earned commissions / bonuses (if calculable)",
+            formula="per_commission_plan_or_contract",
+            notes="Texas does NOT statutorily require accrued vacation to be paid at termination. Depends entirely on employer policy or contract.",
+            citation="Texas Labor Code §61",
+        ),
+    ),
+    protections=(
+        Protection(
+            name="protected_class_federal_and_TCHRA",
+            scope="discrimination based on race, color, religion, sex, national origin, age 40+, disability, genetic information; TCHRA applies at 15+ employees, parallels Title VII",
+            citation="Title VII; ADEA; ADA; Texas Labor Code Chapter 21",
+        ),
+        Protection(
+            name="workers_comp_retaliation",
+            scope="dismissal in retaliation for filing a workers' compensation claim is prohibited",
+            citation="Texas Labor Code §451.001",
+        ),
+        Protection(
+            name="sabine_pilot_public_policy",
+            scope=(
+                "narrow common-law exception: discharge for refusing to perform an illegal act "
+                "that would expose the employee to criminal liability"
+            ),
+            citation="Sabine Pilot Service Inc. v. Hauck, 687 S.W.2d 733 (Tex. 1985)",
+        ),
+        Protection(
+            name="public_sector_whistleblower",
+            scope="public-sector employees protected by Texas Whistleblower Act §554; private-sector whistleblower protection comes from federal statutes (SOX, Dodd-Frank, etc.)",
+            citation="Texas Whistleblower Act §554",
+        ),
+    ),
+    mandatory_steps=(
+        "Pay final wages within 6 calendar days of discharge for involuntary terminations (Texas Labor Code §61.014(a)).",
+        "Pay final wages on the next regular payday for voluntary resignations (§61.014(b)).",
+        "Provide notice of right to apply for unemployment benefits (TWC).",
+        "Send COBRA / state mini-COBRA notification (federal COBRA at 20+ employees; Texas Insurance Code §1251.252 mini-COBRA for 2-19 employees, up to 9 months).",
+        "If federal WARN thresholds met: 60 days advance written notice to affected employees, state dislocated-worker unit, and chief elected official.",
+    ),
+    at_will=True,
+    final_pay_deadline=(
+        "Involuntary: within 6 calendar days of discharge (Texas Labor Code §61.014(a)). "
+        "Voluntary resignation: next regularly scheduled payday (§61.014(b))."
+    ),
+    notes=(
+        "At-will is the default rule. The strictest practical constraint is the 6-day final-pay window for "
+        "involuntary terminations, with the Texas Workforce Commission administering wage claims. "
+        "No state WARN supplement, so for mass layoffs only the federal WARN thresholds (100+ employees, "
+        "50+ affected with 33% threshold) apply, making large layoffs at smaller Texas employers unregulated. "
+        "Texas is a right-to-work state under Texas Labor Code §101.052 et seq."
+    ),
+)
+
+
+# -----------------------------------------------------------------------------
+# United States — New York
+# Source: docs/jurisdiction.md §"United States — New York (US-NY)"
+#
+# At-will. No same-day final pay (unlike CA). NY WARN Act is BROADER than
+# federal: 50+ employees, 25+ affected (or 33% threshold), 90 days notice.
+# -----------------------------------------------------------------------------
+
+US_NY_FULL_TIME = JurisdictionRule(
+    country="US-NY",
+    employment_type="full-time",
+    legal_framework=(
+        "At-will common-law doctrine; NY Labor Law §191 (final-pay timing); "
+        "§195 (notice and recordkeeping); §198 (wage-claim damages); "
+        "§740 (whistleblower, expanded 2021); §860 et seq. (NY WARN Act); "
+        "NY Executive Law §296 (NYSHRL anti-discrimination, all employers since 2019 amendments); "
+        "NYC Admin Code §8-101 et seq. (NYCHRL, broader still for NYC employers); "
+        "Federal: Title VII, ADEA, ADA, FMLA, federal WARN."
+    ),
+    employer_notice=NoticeRule(
+        base_days=0,
+        description=(
+            "At-will: no statutory notice for individual terminations. "
+            "EXCEPTION: NY WARN requires 90 days advance notice for qualifying mass layoffs "
+            "(broader than federal WARN's 60-day rule)."
+        ),
+        citation="At-will common law; NY Labor Law §860 et seq.",
+    ),
+    employee_notice=NoticeRule(
+        base_days=0,
+        description="At-will: no statutory notice required from employee.",
+        citation="At-will common law",
+    ),
+    severance_components=(
+        SeveranceComponent(
+            name="Earned wages through last day worked",
+            formula="hourly_or_salaried_wages_through_termination",
+            citation="NY Labor Law §191",
+        ),
+        SeveranceComponent(
+            name="Accrued vacation (if vested under employer policy)",
+            formula="daily_wage * vested_vacation_days",
+            notes=(
+                "Accrued vacation is treated as wages under §198-c where the employer's policy or "
+                "contract creates a vested benefit. Explicit 'use it or lose it' or non-vesting policies "
+                "can be enforceable if clearly communicated in advance."
+            ),
+            citation="NY Labor Law §198-c; NY DOL guidance",
+        ),
+        SeveranceComponent(
+            name="Earned commissions / bonuses (if calculable)",
+            formula="per_commission_plan_or_contract",
+            citation="NY Labor Law §191",
+        ),
+        SeveranceComponent(
+            name="Liquidated damages (if final pay is late)",
+            formula="1.0 * unpaid_wages",
+            notes=(
+                "100% liquidated damages of unpaid wages under §198(1-a) where the employer cannot "
+                "show a good-faith basis for non-payment. Plus reasonable attorney's fees. Statutory teeth "
+                "behind the next-payday rule."
+            ),
+            citation="NY Labor Law §198(1-a)",
+        ),
+    ),
+    protections=(
+        Protection(
+            name="protected_class_NYSHRL_NYCHRL",
+            scope=(
+                "NYSHRL (since 2019 amendments) applies to ALL employers regardless of size for discrimination "
+                "and harassment. NYCHRL applies in NYC and provides broader protections still. Federal Title VII "
+                "covers 15+ employees."
+            ),
+            citation="NY Executive Law §296 (NYSHRL); NYC Admin Code §8-101 et seq. (NYCHRL); Title VII",
+        ),
+        Protection(
+            name="whistleblower_expanded_2021",
+            scope=(
+                "NY Labor Law §740 was significantly expanded in 2021 to cover a broader range of "
+                "protected disclosures and reduce the threshold for actionable employer conduct."
+            ),
+            citation="NY Labor Law §740",
+        ),
+        Protection(
+            name="workers_comp_retaliation",
+            scope="dismissal for filing a workers' compensation claim is prohibited",
+            citation="NY Workers' Compensation Law §120",
+        ),
+        Protection(
+            name="implied_contract_Weiner",
+            scope=(
+                "employer handbooks, offer letters, or sustained representations can create an implied modification of "
+                "at-will status. NY recognises this more readily than Texas."
+            ),
+            citation="Weiner v. McGraw-Hill, Inc., 57 N.Y.2d 458 (1982)",
+        ),
+    ),
+    mandatory_steps=(
+        "Pay final wages on the next regularly scheduled payday after termination (NY Labor Law §191).",
+        "Direct deposit of final wages requires employee's prior written authorisation (§192).",
+        "Late payment exposes employer to liquidated damages of 100% of unpaid wages plus attorney's fees (§198(1-a)).",
+        "Send COBRA / NY State Continuation notice (federal COBRA at 20+ employees; NY mini-COBRA extends total continuation up to 36 months for smaller employers).",
+        (
+            "If NY WARN thresholds met (50+ employees AND 25+ affected at single site with 33% threshold, OR 250+ at single site): "
+            "90 days advance written notice to affected employees, NY DOL, local Workforce Investment Board, and chief elected official."
+        ),
+    ),
+    at_will=True,
+    final_pay_deadline=(
+        "Next regularly scheduled payday after termination, for both involuntary discharge and voluntary "
+        "resignation (NY Labor Law §191). No same-day rule (unlike CA). Late payment triggers 100% liquidated "
+        "damages plus attorney's fees under §198(1-a)."
+    ),
+    notes=(
+        "NY WARN is broader than federal WARN: 50+ employee threshold (vs federal 100+), 25+ affected (vs 50+), "
+        "90 days notice (vs 60). For mass layoffs in NY, NY WARN almost always controls. "
+        "Final-pay rule is the most-misunderstood feature: NY does NOT have CA's same-day rule. Wages are due on the "
+        "next regularly scheduled payday. The teeth are in §198(1-a) liquidated damages, not in timing strictness. "
+        "NYSHRL applies to ALL employers since 2019 (no minimum employee count for discrimination and harassment claims). "
+        "NYC Human Rights Law is broader still for NYC employers."
+    ),
+)
+
+
 # =============================================================================
 # Registry + lookup
 # =============================================================================
@@ -1380,6 +1599,8 @@ _RULES: dict[tuple[str, str], JurisdictionRule] = {
     ("IT", "full-time"): IT_FULL_TIME,
     ("SG", "full-time"): SG_FULL_TIME,
     ("ZA", "full-time"): ZA_FULL_TIME,
+    ("US-TX", "full-time"): US_TX_FULL_TIME,
+    ("US-NY", "full-time"): US_NY_FULL_TIME,
 }
 
 # Synonyms — let the orchestrator pass natural variants without forcing
@@ -1403,12 +1624,14 @@ _EMPLOYMENT_TYPE_ALIASES: dict[str, str] = {
 }
 
 
-COVERED_COUNTRIES: frozenset[str] = frozenset({"BR", "DE", "US-CA", "UK", "FR", "ES", "IT", "SG", "ZA"})
+COVERED_COUNTRIES: frozenset[str] = frozenset(
+    {"BR", "DE", "US-CA", "UK", "FR", "ES", "IT", "SG", "ZA", "US-TX", "US-NY"}
+)
 
 
 UNCOVERED_COUNTRIES_MESSAGE = (
     "Jurisdiction not covered. This engine has rules for: "
-    "BR (CLT, PJ), DE, US-CA, UK, FR (cadre, non-cadre), ES, IT, SG, ZA. "
+    "BR (CLT, PJ), DE, US-CA, US-TX, US-NY, UK, FR (cadre, non-cadre), ES, IT, SG, ZA. "
     "For other jurisdictions, recommend specialist legal review before any termination action."
 )
 

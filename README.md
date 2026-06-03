@@ -129,8 +129,10 @@ Tools are MCP servers: separate logical units with a defined protocol contract. 
 | Italy (IT) | full-time (impiegato default) | Codice Civile Art. 2118 (notice), Art. 2120 (TFR); Legge 223/1991 (collective dismissal); Jobs Act D.Lgs. 23/2015 |
 | Singapore (SG) | full-time | Employment Act (Chapter 91) §10, §11, §22, §43; MOM Tripartite Advisory; Workplace Fairness Act 2025 |
 | South Africa (ZA) | full-time | BCEA §37, §41 (severance); LRA §188, §189, §189A (large-scale), §187 (automatically unfair); CCMA jurisdiction |
+| Texas (US-TX) | full-time | Texas Labor Code §61 (Payday Law), Chapter 21 (TCHRA); federal WARN (no state WARN supplement); Sabine Pilot doctrine |
+| New York (US-NY) | full-time | NY Labor Law §191, §198, §740, §860 et seq. (NY WARN, broader than federal); NYSHRL; NYC HRL |
 
-Other countries return a structured *"not covered, recommend legal review"* response. Phase 8 (in progress) is still expanding to US-TX and US-NY, with JP and IN as graceful-fallback tests. Batch A (UK + FR + ES) and Batch B1 (IT + SG + ZA) shipped.
+Other countries return a structured *"not covered, recommend legal review"* response. Only JP and IN remain pending in Phase 8 (as graceful-fallback sections). Batch A (UK + FR + ES), Batch B1 (IT + SG + ZA), and Batch B2 (US-TX + US-NY) shipped.
 
 ---
 

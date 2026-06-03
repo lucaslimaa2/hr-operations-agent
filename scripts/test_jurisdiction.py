@@ -430,6 +430,88 @@ SCENARIOS: list[Scenario] = [
             f"compliant={r.get('compliant')}, mentions §189A: {'189A' in r.get('citation', '')}",
         ),
     ),
+    # ---------- US-TX (Phase 8 batch B2) ----------
+    Scenario(
+        description=(
+            "US-TX at-will: notice 0 days. No state WARN supplement.\n"
+            "        Federal WARN is the only mass-layoff regime."
+        ),
+        call_repr="get_notice_period('US-TX', tenure_months=60)",
+        call=lambda: get_notice_period("US-TX", 60),
+        predicate=expect_notice_days(0),
+    ),
+    Scenario(
+        description=(
+            "US-TX federal WARN trigger: 80 affected at 200-employee site (40% ≥ 33%).\n"
+            "        Federal WARN's 60-day notice required."
+        ),
+        call_repr="validate_action('mass_layoff', 'US-TX', {total_employees: 200, affected_count: 80})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "US-TX",
+            {"total_employees": 200, "affected_count": 80},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "federal WARN" in r.get("reason", ""),
+            f"compliant={r.get('compliant')}, mentions federal WARN: {'federal WARN' in r.get('reason', '')}",
+        ),
+    ),
+    Scenario(
+        description=(
+            "US-TX no state WARN supplement: 25 dismissals at 60-employee firm should pass.\n"
+            "        Under federal WARN's 100-employee threshold; Texas has no state WARN to fill the gap."
+        ),
+        call_repr="validate_action('mass_layoff', 'US-TX', {total_employees: 60, affected_count: 25})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "US-TX",
+            {"total_employees": 60, "affected_count": 25},
+        ),
+        predicate=expect_compliant,
+    ),
+    # ---------- US-NY (Phase 8 batch B2) ----------
+    Scenario(
+        description=(
+            "US-NY at-will: notice 0 days. NY WARN broader than federal.\n"
+            "        Final pay rule is next regular payday (NY Labor Law §191), not same-day."
+        ),
+        call_repr="get_notice_period('US-NY', tenure_months=60)",
+        call=lambda: get_notice_period("US-NY", 60),
+        predicate=expect_notice_days(0),
+    ),
+    Scenario(
+        description=(
+            "US-NY WARN trigger where federal would NOT: 30 affected at 80-employee firm.\n"
+            "        NY WARN: 50+ employees AND 25+ affected (37.5% ≥ 33%). Federal WARN does not trigger (under 100 employees)."
+        ),
+        call_repr="validate_action('mass_layoff', 'US-NY', {total_employees: 80, affected_count: 30})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "US-NY",
+            {"total_employees": 80, "affected_count": 30},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "NY WARN" in r.get("reason", "") and "90 days" in r.get("reason", ""),
+            f"compliant={r.get('compliant')}, mentions NY WARN + 90 days: "
+            f"{('NY WARN' in r.get('reason', '') and '90 days' in r.get('reason', ''))}",
+        ),
+    ),
+    Scenario(
+        description=(
+            "US-NY large layoff triggers BOTH NY and federal WARN: 80 affected at 200-emp site.\n"
+            "        NY WARN's 90-day rule controls (stricter than federal's 60 days)."
+        ),
+        call_repr="validate_action('mass_layoff', 'US-NY', {total_employees: 200, affected_count: 80})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "US-NY",
+            {"total_employees": 200, "affected_count": 80},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "90 days" in r.get("reason", ""),
+            f"compliant={r.get('compliant')}, 90-day rule cited: {'90 days' in r.get('reason', '')}",
+        ),
+    ),
     # ---------- Graceful fallback for uncovered country ----------
     Scenario(
         description=(

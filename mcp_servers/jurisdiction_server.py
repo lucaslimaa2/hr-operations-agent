@@ -582,6 +582,88 @@ def _validate_mass_layoff(country: str, ctx: dict[str, Any]) -> dict[str, Any]:
             "citation": "Code du travail Art. L1233-3, L1233-8",
         }
 
+    if country == "US-TX":
+        # Federal WARN only. No state WARN supplement in Texas.
+        # 100+ employees, 50+ affected at single site OR 500+ affected, with 33% threshold
+        # applying to layoffs of 50-499 (same as the US-CA federal WARN logic).
+        federal_triggered = total >= 100 and (affected >= 500 or (affected >= 50 and affected / max(total, 1) >= 0.33))
+        if not federal_triggered:
+            return {
+                "compliant": True,
+                "reason": (
+                    f"Layoff of {affected} at a {total}-employee Texas site does not trigger federal WARN "
+                    "(under 50 affected OR fails 33% threshold) and Texas has no state WARN supplement."
+                ),
+                "recommendation": (
+                    "Proceed as individual at-will terminations. For each: pay final wages within 6 calendar "
+                    "days of discharge (Texas Labor Code §61.014(a)). Confirm no protected-class or retaliation "
+                    "concerns. Send COBRA / Texas mini-COBRA notification."
+                ),
+                "citation": "29 USC §§2101-2109 (federal WARN); Texas Labor Code §61.014",
+            }
+        return {
+            "compliant": False,
+            "reason": (
+                f"Layoff of {affected} at a {total}-employee Texas site triggers federal WARN. "
+                "60 days advance written notice required."
+            ),
+            "recommendation": (
+                "Issue 60 days advance written notice to: (1) affected employees or their representatives, "
+                "(2) Texas state dislocated-worker unit, (3) chief elected official of the city or county where "
+                "the site is located. Failure exposes the employer to 60 days back pay + benefits per affected "
+                "employee plus $500/day civil penalty to the local government."
+            ),
+            "citation": "29 USC §§2101-2109 (federal WARN)",
+        }
+
+    if country == "US-NY":
+        # NY WARN is broader than federal WARN. Both checked; the stricter controls.
+        # NY WARN: 50+ employees AND (250+ affected OR (25+ affected AND 33% threshold)).
+        # Federal WARN: 100+ employees AND (500+ OR (50+ AND 33%)).
+        ny_triggered = total >= 50 and (affected >= 250 or (affected >= 25 and affected / max(total, 1) >= 0.33))
+        federal_triggered = total >= 100 and (affected >= 500 or (affected >= 50 and affected / max(total, 1) >= 0.33))
+
+        if not ny_triggered and not federal_triggered:
+            return {
+                "compliant": True,
+                "reason": (
+                    f"Layoff of {affected} at a {total}-employee NY site does not trigger NY WARN "
+                    "(under 25 affected OR fails 33% threshold OR under 50 employees) nor federal WARN."
+                ),
+                "recommendation": (
+                    "Proceed as individual at-will terminations. For each: pay final wages on the next "
+                    "regularly scheduled payday (NY Labor Law §191). Late payment triggers §198(1-a) "
+                    "liquidated damages of 100% plus attorney's fees. Confirm no NYSHRL or NYCHRL "
+                    "discrimination or retaliation concerns. Send COBRA / NY State Continuation notice."
+                ),
+                "citation": "NY Labor Law §860 et seq. (NY WARN); 29 USC §§2101-2109 (federal WARN)",
+            }
+
+        trigger_summary = []
+        if ny_triggered:
+            trigger_summary.append("NY WARN")
+        if federal_triggered:
+            trigger_summary.append("Federal WARN")
+
+        notice_days = 90 if ny_triggered else 60
+        return {
+            "compliant": False,
+            "reason": (
+                f"Layoff of {affected} at a {total}-employee NY site triggers "
+                f"{' and '.join(trigger_summary)}. "
+                f"{notice_days} days advance written notice required (NY WARN's 90-day rule controls "
+                f"where applicable, being stricter than federal WARN's 60 days)."
+            ),
+            "recommendation": (
+                f"Issue {notice_days} days advance written notice to: (1) affected employees, (2) NY "
+                f"Department of Labor, (3) local Workforce Investment Board, (4) chief elected official "
+                f"of the municipality where the site is located. Failure exposes employer to 60 days back "
+                f"pay + benefits per affected employee plus $500/day civil penalty plus reasonable "
+                f"attorney's fees recoverable by the State or in private action."
+            ),
+            "citation": "NY Labor Law §860 et seq. (NY WARN); 29 USC §§2101-2109 (federal WARN)",
+        }
+
     if country == "IT":
         # Legge 223/1991 Arts. 4-5: firms 15+ employees, 5+ dismissals at the same
         # provincia within a 120-day window for the same economic/organisational reasons.

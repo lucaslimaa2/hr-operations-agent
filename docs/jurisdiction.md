@@ -1338,6 +1338,193 @@ Now alternative scenario: the same employee is dismissed for alleged misconduct 
 
 ---
 
+## United States — Texas (US-TX)
+
+### At-will doctrine
+
+#### Legal framework
+
+- Texas is an **at-will employment** state under common law. Codified parallels appear in the Texas Labor Code throughout.
+- **Texas Labor Code Chapter 61** (Texas Payday Law): governs final-pay timing.
+- **Texas Labor Code Chapter 21** (TCHRA, Texas Commission on Human Rights Act): state anti-discrimination protections, applies to employers with 15+ employees. Parallels Title VII.
+- Federal overlay: Title VII of the Civil Rights Act of 1964, ADEA (Age Discrimination in Employment Act), ADA (Americans with Disabilities Act), FMLA, USERRA, federal WARN Act (29 USC §§2101 to 2109).
+- **No state WARN supplement** in Texas, unlike CA and NY.
+
+At-will means either party may terminate at any time, with or without cause, with or without notice, subject only to the narrow exceptions below.
+
+#### At-will exceptions in Texas
+
+- **Discrimination** under Title VII, ADEA, ADA, and TCHRA.
+- **Retaliation** for filing a workers' comp claim (Texas Labor Code §451.001), participating in protected concerted activity under the NLRA, or filing OSHA / wage complaints. The Texas Whistleblower Act (Texas Government Code Chapter 554) covers public-sector employees only; private-sector whistleblower protection comes from federal statutes such as Sarbanes-Oxley and Dodd-Frank.
+- **Public policy exception** is narrowly construed in Texas. The **Sabine Pilot doctrine** (*Sabine Pilot Service Inc. v. Hauck*, 687 S.W.2d 733 (Tex. 1985)) recognises only one common-law exception: discharge for refusing to perform an illegal act that would expose the employee to criminal liability.
+- **Implied-contract exception**: Texas recognises this only narrowly; employee handbooks typically contain at-will disclaimers that defeat implied-contract claims.
+
+#### Notice period rules
+
+- **No statutory notice period** required from either party. Exception: federal WARN Act for qualifying mass layoffs (below).
+- Notice may be required by individual employment contract or collective bargaining agreement (rare in Texas).
+
+### Final pay obligations
+
+#### Legal framework
+
+- **Texas Labor Code §61.014** (Texas Payday Law): final-pay timing.
+- Texas Workforce Commission (TWC) administers wage claims under Chapter 61.
+
+#### Rules
+
+- **Involuntary termination (discharge or layoff)**: wages due **no later than 6 calendar days** after the discharge date (Texas Labor Code §61.014(a)).
+- **Voluntary resignation**: wages due on the **next regularly scheduled payday** (§61.014(b)).
+- Wages include earned commissions and bonuses calculable at termination. Accrued vacation is payable **only if** the employer's written policy or contract treats vacation as a wage; Texas does **not** statutorily require accrued vacation to be paid out.
+- Final pay can be made by direct deposit, mailed, or paid in person at the employer's option.
+
+#### Severance
+
+- **No statutory severance** at the state or federal level. Severance is purely contractual or via a severance plan governed by ERISA.
+
+### Federal WARN Act (29 USC §§2101 to 2109)
+
+Texas has no state WARN supplement, so federal WARN is the only mass-layoff notice obligation.
+
+- Applies to employers with **100+ full-time employees** (or 100+ FT and PT combined working 4,000+ hours/week excluding overtime).
+- Triggers: **60 days advance written notice** required for:
+  - **Plant closing**: permanent or temporary shutdown of a single site of employment (or operating unit within a site) resulting in employment loss for 50+ FT employees in any 30-day period.
+  - **Mass layoff**: reduction in force at a single site affecting either (a) 500+ FT employees, or (b) 50 to 499 FT employees if they constitute 33%+ of the active workforce at that site, in any 30-day period.
+- Notice recipients: affected employees or their representatives, the state dislocated-worker unit, and the local government chief elected official.
+- **Penalty**: back pay and benefits for each affected employee up to 60 days, plus civil penalty up to $500/day to the local government.
+- Exceptions (faltering company, unforeseeable business circumstances, natural disaster) are narrowly construed.
+
+### Edge cases
+
+- **COBRA** (federal) for employers with 20+ employees; state mini-COBRA equivalent under **Texas Insurance Code §1251.252** for smaller employers (2 to 19 employees), providing up to 9 months of continuation coverage.
+- **TWC unemployment**: employer must provide notice of the right to apply for unemployment benefits at termination.
+- **Right-to-work state** under Texas Labor Code §101.052 et seq.: employees cannot be required to join or pay dues to a union as a condition of employment.
+
+### Worked example
+
+Scenario: Texas-based full-time employee at a 200-employee firm, 4 years tenure, salary $7,000/month (~$323/day), involuntarily terminated on a Monday. No state WARN supplement applies; this is a single dismissal (not a mass layoff), so federal WARN does not trigger.
+
+1. **Final wages** due by the following Sunday: 6 calendar days after discharge (§61.014(a)).
+2. Accrued vacation payout depends on the employer's written policy; if policy is silent or explicitly disclaims payout, none is owed.
+3. Variation: if the same employer instead terminates **60+ employees at a single 200-employee site within a 30-day window**, federal WARN does trigger (60+ employees affected, ≥33% of workforce, ≥50 absolute threshold met). Required: 60-day advance written notice.
+4. Failure to provide WARN notice: 60 days of back pay and benefits per affected employee, plus $500/day civil penalty to the local government.
+
+### Sources
+
+- Texas Statutes **Labor Code Chapter 61 (Payday Law)**: <https://statutes.capitol.texas.gov/Docs/LA/htm/LA.61.htm>
+- Texas Statutes **Labor Code Chapter 21 (TCHRA)**: <https://statutes.capitol.texas.gov/Docs/LA/htm/LA.21.htm>
+- Texas Workforce Commission **Texas Payday Law**: <https://www.twc.texas.gov/programs/wage-and-hour/texas-payday-law>
+- US DOL **WARN Act**: <https://www.dol.gov/agencies/eta/layoffs/warn>
+- *Sabine Pilot Service Inc. v. Hauck*, 687 S.W.2d 733 (Tex. 1985)
+- Baker McKenzie *Global Employer Guide: United States*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: United States*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+
+---
+
+## United States — New York (US-NY)
+
+### At-will doctrine
+
+#### Legal framework
+
+- **At-will employment** under New York common law.
+- **NY Labor Law §191** (Frequency of payments): governs final-pay timing.
+- **NY Labor Law §195** (notice and recordkeeping): notice-of-wage-rate and pay-statement requirements.
+- **NY Labor Law §198** (penalties): liquidated damages for unpaid wages.
+- **NY Labor Law §860 et seq.** (NY WARN Act): state mass-layoff notice requirement, broader than federal.
+- **NY Executive Law §296** (NY State Human Rights Law, NYSHRL): state anti-discrimination protections. Coverage was expanded by the 2019 amendments and now applies to **all employers** for discrimination and harassment claims (not just those with 4+ employees).
+- **NYC Human Rights Law** (NYC Admin Code §8-101 et seq.): for NYC employers, broader protections still.
+- Federal overlay: Title VII, ADEA, ADA, FMLA, federal WARN Act.
+
+At-will means either party may terminate at any time, with or without cause, with or without notice, subject to the exceptions below.
+
+#### At-will exceptions in NY
+
+- **Discrimination** under Title VII, ADEA, ADA, NYSHRL, and NYCHRL (where applicable). NYSHRL and NYCHRL have lower coverage thresholds and broader protections than federal law.
+- **Retaliation** for whistleblowing (NY Labor Law §740, substantially expanded by the 2021 amendment to cover a broader range of activities), workers' comp claims (NY Workers' Compensation Law §120), filing OSHA complaints, or exercising rights under the NY Healthy Workplace framework.
+- **Implied-contract exception** more readily recognised than in Texas: *Weiner v. McGraw-Hill, Inc.*, 57 N.Y.2d 458 (1982) established that employer statements (handbooks, offer letters) can create binding modifications to the at-will default.
+- **Public policy exception** is narrower in NY than in CA; NY courts have largely declined to create a free-standing common-law wrongful-discharge tort, deferring instead to statutory schemes.
+
+#### Notice period rules
+
+- **No statutory notice period** for individual terminations. Exception: NY WARN for qualifying mass layoffs (below).
+- Notice may be required by individual employment contract or collective bargaining agreement.
+
+### Final pay obligations
+
+New York does **not** require immediate same-day final pay (unlike CA), but the timing rule is uniform across involuntary and voluntary departures and the penalty regime under §198 is significant.
+
+#### Legal framework
+
+- **NY Labor Law §191** (frequency of payments).
+- **NY Labor Law §192** (direct deposit authorisation).
+- **NY Labor Law §198(1-a)** (liquidated damages).
+- **NY Labor Law §198-c** (benefits and wage supplements).
+
+#### Rules
+
+- **Final wages due by the next regularly scheduled payday** following termination, for both involuntary discharge and voluntary resignation (§191).
+- Wages include earned wages, commissions, and bonuses calculable at termination.
+- **Accrued vacation**: under NY DOL guidance and §198-c, accrued vacation is treated as wages where the employer's policy or contract creates a vested benefit. An employer policy explicitly stating "use it or lose it" or non-vesting can be enforceable if clearly communicated in writing to employees in advance.
+- **Direct deposit** of final pay requires written employee authorisation (§192).
+- **Penalty for late payment**: §198(1-a) allows liquidated damages of **100% of unpaid wages** plus interest and attorney's fees, in addition to the unpaid wages themselves, unless the employer proves a good-faith basis for believing the underpayment complied with law.
+
+#### Severance
+
+- **No statutory severance** at the state or federal level. Severance is contractual or via an ERISA-governed severance plan.
+
+### NY WARN Act (NY Labor Law §860 et seq.)
+
+NY WARN is **broader than federal WARN** on every key dimension: lower employer threshold, lower employee triggers, longer notice period, and additional covered events.
+
+- Applies to employers with **50 or more employees** (excluding part-time workers) in New York State. Federal WARN threshold is 100+.
+- Triggers: **90 days advance written notice** required (vs federal 60), for:
+  - **Plant closing**: permanent or temporary shutdown of a single site of employment, or one or more facilities or operating units within a single site, resulting in employment loss for 25+ employees in any 30-day period.
+  - **Mass layoff**: reduction in force affecting either (a) 250+ employees at a single site, or (b) 25+ employees if they constitute 33%+ of the workforce at that site, in any 30-day period.
+  - **Relocation**: moving operations 50+ miles away resulting in employment loss for 25+ employees.
+  - **Covered reduction in work hours**: 50%+ reduction in work hours for 6+ consecutive months affecting 25+ employees.
+- Notice recipients: affected employees, NY Department of Labor, local Workforce Investment Board, and the chief elected official of the municipality where the site is located.
+- **Penalty**: back pay and benefits for each affected employee up to 60 days, plus civil penalty of up to $500/day for each day of violation, plus reasonable attorney's fees recoverable by the State or by the employees in a private action.
+- Exceptions (faltering company for plant closings only, unforeseeable business circumstances, natural disaster) are narrowly construed.
+
+### Edge cases
+
+- **COBRA** federal continuation for 18 months (employers with 20+ employees).
+- **NY State Continuation** ("mini-COBRA") for smaller employers, extending the total continuation period up to 36 months when combined with federal COBRA.
+- **NY Paid Family Leave** (NY Workers' Compensation Law §§200 to 211): job-protected leave for bonding with a new child, caring for a family member with a serious health condition, or military exigency. Benefit rate (percentage of average weekly wage and weekly cap) is adjusted annually; verify against current NY State PFL government source rather than relying on a stale figure.
+- **NY Paid Sick Leave** (NY Labor Law §196-b): all NY employers must provide paid or unpaid sick leave depending on employer size.
+- **NYC and Westchester** local sick-leave and predictive-scheduling ordinances may impose additional requirements on top of state law.
+
+### Worked example
+
+Scenario A (individual termination): NY-based full-time employee at an 80-employee firm, 5 years tenure, weekly salary $2,000. Involuntarily terminated on a Friday; next regular payday is the following Friday.
+
+1. **Final wages** due on the following Friday (§191). No same-day rule.
+2. Accrued vacation payable as wages unless a clearly communicated "use it or lose it" policy applies.
+3. Late payment exposes the employer to liquidated damages of 100% of the unpaid amount under §198(1-a), plus interest and attorney's fees.
+
+Scenario B (mass layoff at the same 80-employee firm): employer proposes to lay off 30 employees in a 30-day window. That is 37.5% of the workforce and 25+ absolute, so **NY WARN triggers** (50+ employee threshold met, plus event threshold met).
+
+1. Required: **90 days advance written notice** to affected employees, NY DOL, local Workforce Investment Board, and the chief elected official.
+2. Federal WARN does **not** trigger at this firm size (under the 100-employee threshold).
+3. Failure to provide NY WARN notice: 60 days of back pay and benefits per affected employee (× 30 employees = significant exposure), plus $500/day civil penalty, plus attorney's fees.
+
+### Sources
+
+- NY Senate **Labor Law §191**: <https://www.nysenate.gov/legislation/laws/LAB/191>
+- NY Senate **Labor Law §195**: <https://www.nysenate.gov/legislation/laws/LAB/195>
+- NY Senate **Labor Law §198**: <https://www.nysenate.gov/legislation/laws/LAB/198>
+- NY Senate **Labor Law §740 (Whistleblower)**: <https://www.nysenate.gov/legislation/laws/LAB/740>
+- NY Senate **Labor Law §860 et seq. (NY WARN)**: <https://www.nysenate.gov/legislation/laws/LAB/A25-A>
+- NY State DOL **Worker Adjustment and Retraining Notification (WARN)**: <https://dol.ny.gov/worker-adjustment-and-retraining-notification-warn>
+- NY State Division of Human Rights: <https://dhr.ny.gov/>
+- NYC Commission on Human Rights: <https://www.nyc.gov/site/cchr/index.page>
+- US DOL **Federal WARN Act**: <https://www.dol.gov/agencies/eta/layoffs/warn>
+- *Weiner v. McGraw-Hill, Inc.*, 57 N.Y.2d 458 (1982)
+- Baker McKenzie *Global Employer Guide: United States*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+
+---
+
 ## Engine integration notes
 
 The rules engine in `mcp_servers/jurisdiction_server.py` should expose the following deterministic outputs derived from this document:
