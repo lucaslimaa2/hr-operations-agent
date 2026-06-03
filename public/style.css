@@ -524,6 +524,111 @@ footer code {
 }
 
 /* -------- Session stats (sticky bar above composer) -------- */
+/* -------- Dataset disclosure (the 20 test employees) -------- */
+#dataset {
+  margin-top: 16px;
+}
+
+#dataset > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 6px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 13px;
+  width: fit-content;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+#dataset > summary::-webkit-details-marker {
+  display: none;
+}
+
+#dataset > summary::before {
+  content: "▸ ";
+  color: var(--muted);
+}
+
+#dataset[open] > summary::before {
+  content: "▾ ";
+}
+
+#dataset > summary:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.dataset-body {
+  margin-top: 12px;
+  padding: 16px;
+  background: var(--bubble-agent);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.dataset-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dataset-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dataset-region-row td {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  padding: 14px 10px 4px;
+}
+
+.dataset-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.dataset-row:hover {
+  background: var(--bg);
+}
+
+.dataset-row td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.dataset-row td:first-child {
+  font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dataset-row td:nth-child(3),
+.dataset-row td:nth-child(4) {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dataset-hint {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
 #session-stats {
   display: flex;
   justify-content: space-between;
@@ -593,5 +698,12 @@ footer code {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+  .dataset-body {
+    overflow-x: auto;
+    padding: 12px;
+  }
+  .dataset-table {
+    min-width: 520px;
   }
 }

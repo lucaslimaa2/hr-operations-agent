@@ -32,6 +32,19 @@ document.querySelectorAll(".suggest").forEach((btn) => {
   });
 });
 
+// Wire up the test-dataset rows: clicking one drafts a starter question
+// using the employee's name and collapses the disclosure for cleanliness.
+document.querySelectorAll(".dataset-row").forEach((row) => {
+  row.addEventListener("click", () => {
+    const name = row.dataset.name;
+    if (!name) return;
+    input.value = `Look up ${name} and walk me through what applies if we terminate them.`;
+    input.focus();
+    const details = document.getElementById("dataset");
+    if (details) details.open = false;
+  });
+});
+
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const question = input.value.trim();
