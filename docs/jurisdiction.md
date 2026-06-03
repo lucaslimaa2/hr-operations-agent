@@ -1525,6 +1525,210 @@ Scenario B (mass layoff at the same 80-employee firm): employer proposes to lay 
 
 ---
 
+## Japan (JP)
+
+### Coverage status
+
+Japan is **deliberately excluded from the deterministic rules engine**. The orchestrator returns a structured "jurisdiction not covered, recommend specialist Japanese employment counsel" response for any JP employee. The remainder of this section explains the regulatory shape so that an operator can understand why escalation is the correct default and so that a reviewer of this portfolio can see that the boundary was drawn on the basis of legal substance, not gaps in research.
+
+### Why automation is dangerous in Japan
+
+Japanese dismissal law is structured around an interpretive standard rather than a mechanical test. **Article 16 of the Labor Contracts Act** (Rōdō Keiyaku Hō, Act No. 128 of 2007) codifies the long-standing case-law doctrine of abuse of the right to dismiss (kaiko ken ranyō no hōri): a dismissal is invalid if it lacks "objectively reasonable grounds" and is not "socially appropriate" (shakai tsūnen jō sōtō de aru to mitomerareru). Both phrases are interpretive standards developed by the Supreme Court of Japan and the High Courts across decades of decisions. A deterministic engine cannot evaluate "socially appropriate"; the question is reserved to courts and to counsel advising on litigation risk.
+
+This matters operationally. A dismissal that satisfies every written statutory requirement (30 days notice paid, no protected characteristic implicated, contract terms observed) can still be invalidated months or years later, with reinstatement and full back-pay ordered. An automated answer that reports "this dismissal is compliant" on the basis of the statute alone would be technically defensible on the surface and materially misleading on outcomes.
+
+### Legal framework (for context)
+
+- **Labor Standards Act** (Rōdō Kijun Hō, Act No. 49 of 1947, LSA): minimum employment standards including notice (Art. 20), working hours, and final-pay timing (Art. 23).
+- **Labor Contracts Act** (Rōdō Keiyaku Hō, Act No. 128 of 2007, LCA): codifies dismissal doctrine. **Art. 16** (abuse of dismissal right). **Art. 17** (fixed-term contracts: dismissal mid-term requires "unavoidable reasons"). **Art. 19** (yatoidome doctrine: non-renewal of long-running fixed-term contracts can be ruled abusive).
+- **Civil Code** (Minpō): the underlying contract framework.
+- **Equal Employment Opportunity Act** and related statutes governing discrimination, harassment, and parental leave.
+- **Industrial Safety and Health Act** and the **Workers' Compensation Insurance Act** governing workplace safety obligations.
+- **Case law**: the Supreme Court of Japan judgment in the **Toyo Sanso case** (Showa 54 (1979)) and its successors established the four-factor framework for economic dismissals discussed below.
+
+### Notice and pay in lieu (LSA Article 20)
+
+The written statutory rule is simple: at least **30 days advance notice**, or **payment in lieu equivalent to 30 days of average wages** (kaiko yokoku teate), or any combination of the two. For example, 10 days notice plus 20 days pay in lieu satisfies the rule.
+
+A narrow statutory exception allows for-cause dismissal without notice or pay in lieu where the **Labor Standards Inspection Office** (Rōdō Kijun Kantokusho) certifies that the conduct meets the strict statutory test in Art. 20 para. 1 (typically grave misconduct attributable to the worker). In practice this certification is rarely sought and rarely granted; most employers pay the 30-day equivalent and proceed.
+
+The notice rule is the floor, not the ceiling. The substantive question of whether the dismissal itself is valid is governed by LCA Art. 16, independent of whether notice was correctly given.
+
+### Fixed-term contracts
+
+Fixed-term employment is governed by a separate regime under LCA Arts. 17 to 19. Three rules are particularly relevant.
+
+1. **Mid-term dismissal of a fixed-term worker** requires "unavoidable reasons" (yamu o enai jiyū, LCA Art. 17), a stricter standard than the abuse-of-right test for indefinite contracts.
+2. **Conversion right after five years of renewals** (mukikenkan tenkan, LCA Art. 18): a worker on renewed fixed-term contracts whose total continuous tenure exceeds five years may unilaterally elect conversion to an indefinite contract on the next renewal. This is a worker-side election; the employer cannot block it.
+3. **Yatoidome doctrine** (LCA Art. 19): non-renewal of a long-running fixed-term contract can itself be ruled an abusive dismissal where the worker had a reasonable expectation of renewal. The leading case is the Supreme Court decision in **Hitachi Medical** (Showa 61 (1986)) and successors. The remedy is the same as for an invalid dismissal: reinstatement with back-pay.
+
+### Mass dismissal (seiri kaiko)
+
+Economic dismissals for business reasons are governed by the **four-factor test** (seiri kaiko no yōken) developed in case law, with the Toyo Sanso decision (1979) as the standard reference and a substantial body of later High Court decisions refining each factor:
+
+1. **Genuine business necessity** for the headcount reduction. The employer must demonstrate that the dismissals are necessary to address real economic, technological, or organisational pressures.
+2. **Adequate efforts to avoid dismissal**. Before resorting to involuntary termination, the employer must explore alternatives: transfers within the group (haichi tenkan), voluntary retirement programs (kibo taishoku), hiring freezes, reduction of overtime, suspension of new graduate recruitment, and reduction of executive compensation.
+3. **Reasonable and non-discriminatory selection criteria**. The criteria must be objective, applied consistently, and must not target protected characteristics or union activity.
+4. **Adequate consultation with workers and unions**. Where a union exists, consultation in good faith is required. Where no union exists, consultation with affected workers individually or through elected representatives is expected.
+
+Failure on **any one** factor invalidates the entire layoff. Courts have repeatedly struck down economic dismissals where the employer satisfied three factors but fell short on the fourth (often inadequate consultation). This is a primary reason a deterministic engine cannot give a meaningful "compliant / non-compliant" answer for Japanese economic dismissals: the four-factor test is fact-intensive and the case-law gloss on each factor evolves.
+
+### Voluntary retirement programs (kibo taishoku)
+
+Because involuntary dismissal is legally fragile, the standard tool for headcount reduction in Japan is a **voluntary retirement program**. The employer announces a window during which employees can elect early departure in exchange for an enhanced severance package, typically **2 to 6 months of base salary on top of the standard retirement allowance** (taishokukin), with multiples scaling by tenure and age. This is a matter of common commercial practice rather than statute; the design and amount are within employer discretion subject to non-discrimination constraints. A successful voluntary program also strengthens the employer's position on the second factor of the seiri kaiko test (adequate efforts to avoid involuntary dismissal) if a residual involuntary round is later required.
+
+### Final pay (LSA Article 23)
+
+Where the worker requests payment, all accrued wages and any vested separation benefits must be paid **within 7 days** of separation. Where no request is made, the normal payroll cycle applies. Items typically owed at termination include accrued unpaid salary, statutory retirement allowance where applicable under the employer's work rules (shūgyō kisoku), and any contractual or program-based enhanced severance.
+
+### Why the engine returns "jurisdiction not covered"
+
+Three structural reasons justify the exclusion from deterministic logic.
+
+1. The validity of any individual dismissal turns on LCA Art. 16's "objectively reasonable grounds" and "socially appropriate" standards, which are interpretive judgments, not rule applications.
+2. The validity of any economic dismissal turns on the four-factor seiri kaiko test, where each factor is itself a fact-intensive case-law standard with evolving High Court gloss.
+3. The yatoidome doctrine on fixed-term non-renewal extends the same interpretive logic to contract end-dates, so even apparently mechanical end-of-term events can be re-characterised by a court.
+
+Returning a deterministic statutory answer (for example, "30 days notice satisfies the requirement") would be **technically correct on LSA Art. 20 and actively misleading on real outcomes under LCA Art. 16**. The safe default is escalation to Japanese employment counsel, and the orchestrator's "jurisdiction not covered" response is intended to make that escalation the obvious next step rather than to mask a gap in coverage.
+
+### Sources
+
+- e-Gov **Labor Standards Act (Rōdō Kijun Hō, Act No. 49 of 1947)**: <https://elaws.e-gov.go.jp/document?lawid=322AC0000000049>
+- e-Gov **Labor Contracts Act (Rōdō Keiyaku Hō, Act No. 128 of 2007)**: <https://elaws.e-gov.go.jp/document?lawid=419AC0000000128>
+- Ministry of Health, Labour and Welfare (MHLW) **Termination of Employment**: <https://www.mhlw.go.jp/english/policy/employ-labour/labour-standards/dismissal.html>
+- Supreme Court of Japan, *Toyo Sanso* judgment (Showa 54 (1979)), articulating the four-factor seiri kaiko framework.
+- Supreme Court of Japan, *Hitachi Medical* judgment (Showa 61 (1986)), articulating the yatoidome doctrine for fixed-term non-renewal.
+- MHLW **Model Work Rules (shūgyō kisoku no kijun)**: <https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/model/>
+- Japan Institute for Labour Policy and Training (JILPT) **Labor Situation in Japan and Its Analysis**: <https://www.jil.go.jp/english/lsj/>
+- Baker McKenzie *Global Employer Guide: Japan*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: Japan*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+
+---
+
+## India (IN)
+
+### Coverage status
+
+India is **deliberately excluded from the deterministic rules engine**. The orchestrator returns a structured "jurisdiction not covered, recommend specialist Indian employment counsel" response for any IN employee. The reasoning, as with Japan, is substantive: the matrix of variables that determines the legally correct answer in India is too wide and too volatile for hardcoded rules to remain accurate, and the cost of a wrong automated answer (void dismissals, criminal liability for non-payment of statutory dues, protracted labour-court litigation) is materially higher than the cost of escalating to local counsel.
+
+### The complexity that makes automation unsafe
+
+Four overlapping sources of variability sit beneath every Indian termination question.
+
+1. **Union (central) law versus State law**. Employment is on the Concurrent List of the Constitution, so both the Union Parliament and the State legislatures legislate. Many operational rules (Shops and Establishments Act notice periods, leave, working hours) are set at the State level and differ materially between States.
+2. **Workman versus non-workman classification**. The Industrial Disputes Act 1947 (IDA) and its successor regime confer the strongest protections on persons who meet the statutory definition of "workman". Misclassification disputes are routinely litigated, often for years.
+3. **Establishment size thresholds**. Several of the most consequential rules (government permission for retrenchment, requirement for a standing-orders regime) only attach above specific size thresholds, and the thresholds themselves were raised by the new Labor Codes.
+4. **Partial notification of the new Labor Codes**. The four Codes consolidating the prior regime were enacted in 2019 and 2020 but as of 2026 have not been uniformly brought into force across all States. In several States the pre-Code statutes still govern in practice. "Current law" is therefore itself a State-by-State question.
+
+### Legal framework (for context)
+
+Pre-Code regime (still operative in many States, partially superseded elsewhere):
+
+- **Industrial Disputes Act 1947 (IDA)**, particularly **§2(s)** (definition of "workman"), **§25F** (retrenchment compensation and procedure), **§25G** (last-in, first-out as the default selection criterion), and **§25K to §25N** (prior government permission for retrenchment in establishments at or above the workforce threshold).
+- **Industrial Employment (Standing Orders) Act 1946**: requires a certified standing-orders regime for industrial establishments of 100+ workmen (50+ in some States), covering discipline, misconduct categories, and termination procedure.
+- **Payment of Gratuity Act 1972**: gratuity entitlement on separation after 5 years of continuous service.
+- **Employees' Provident Funds and Miscellaneous Provisions Act 1952**: PF contributions and on-separation PF settlement / transfer.
+- **Employees' State Insurance Act 1948 (ESI)**: social insurance for covered workers below specified wage thresholds.
+- **State Shops and Establishments Acts**: govern white-collar establishments (offices, shops) not covered by the IDA. Examples: **Maharashtra Shops and Establishments (Regulation of Employment and Conditions of Service) Act 2017**, **Karnataka Shops and Commercial Establishments Act 1961**, **Delhi Shops and Establishments Act 1954**, **Tamil Nadu Shops and Establishments Act 1947**, **Telangana Shops and Establishments Act 1988**. Notice periods, leave, working hours, and termination procedures vary across these statutes.
+
+New Code regime (2019 to 2020, partially notified across States):
+
+- **Code on Wages 2019**: consolidates the Minimum Wages Act, Payment of Wages Act, Payment of Bonus Act, and Equal Remuneration Act.
+- **Industrial Relations Code 2020 (IR Code)**: consolidates the IDA, Trade Unions Act, and Standing Orders Act. Raises the §25N government-permission threshold for retrenchment from 100+ workmen to 300+ workmen, and the standing-orders threshold likewise. State notification status varies.
+- **Code on Social Security 2020**: consolidates EPF, ESI, Gratuity, Maternity Benefit, and several other social-security statutes.
+- **Occupational Safety, Health and Working Conditions Code 2020 (OSH Code)**: consolidates the Factories Act, Mines Act, Contract Labour Act, and several other safety / working-condition statutes.
+
+### "Workman" versus non-workman (IDA §2(s))
+
+The IDA defines "workman" by function rather than by job title. A person is a workman if they perform any manual, skilled, unskilled, technical, operational, clerical, or supervisory work. Two principal exclusions apply.
+
+- Persons employed in a **primarily managerial or administrative capacity**.
+- Persons employed in a **supervisory capacity** earning **more than the statutory wage threshold per month** (the threshold has been periodically raised; the IR Code 2020 sets it at INR 18,000 with provision for further central-government revision).
+
+The classification is decided on actual duties, not titles. A "Team Lead" performing operational tasks may be a workman; a junior "Manager" exercising only nominal supervision may also be a workman. Classification disputes are commonly litigated and frequently determine the outcome of the whole termination matter, because the workman regime carries materially stronger protections.
+
+### Retrenchment compensation and procedure (IDA §25F)
+
+Where a workman with at least one year of continuous service is retrenched, §25F requires:
+
+1. **One month's written notice** stating the reasons for retrenchment, OR payment of wages in lieu of notice.
+2. **Retrenchment compensation equivalent to 15 days average pay for every completed year of continuous service** (or part of a year in excess of six months).
+3. **Notice to the appropriate Government** in the prescribed manner.
+
+Non-compliance with §25F renders the retrenchment void: courts routinely order reinstatement with back-pay.
+
+### Establishment-size thresholds and prior government permission (IDA §25N / IR Code)
+
+Where the establishment employs **100 or more workmen** (under the IDA) or **300 or more workmen** (under the IR Code 2020, in States where notified), **prior written permission** of the appropriate Government is required before any retrenchment can take effect. Without that permission, the retrenchment is **void ab initio** and the workmen continue in service with full pay (IDA §25N(8) and successors).
+
+The threshold that actually applies depends on whether the relevant State has notified the IR Code provisions. As of 2026, several States have notified, others have not, and some have notified for limited sectors only. An engine that hardcoded "100" or "300" would be wrong in different sets of States.
+
+### State Shops and Establishments Acts
+
+For white-collar offices, shops, and commercial establishments outside the IDA "industry" framework, the applicable statute is the relevant State Shops and Establishments Act. Notice periods, leave entitlements, and termination procedures vary. Examples (illustrative, not exhaustive):
+
+- **Maharashtra**: notice as per contract subject to State Act minimums; service certificate required at separation.
+- **Karnataka**: 30 days notice (or wages in lieu) for employees with 6+ months of continuous service; service certificate required.
+- **Delhi**: 30 days notice (or wages in lieu) after 3 months of continuous service.
+- **Tamil Nadu** and **Telangana**: similar one-month-notice norms with State-specific exclusions and procedural overlays.
+
+A "termination rules for India" answer that does not first ask the **State** and the **establishment type and size** is wrong by construction.
+
+### Notice (general norm)
+
+For non-workman white-collar employees, notice is typically governed by the **employment contract**, with most contracts mirroring the applicable State Shops Act minimum (commonly 1 to 3 months). For workmen under the IDA, the §25F regime applies: one month written notice or wages in lieu, plus the 15-days-per-year retrenchment compensation.
+
+### Gratuity (Payment of Gratuity Act 1972)
+
+Gratuity is the statutory long-service payment, retained by the Code on Social Security 2020.
+
+- **Eligibility**: 5 years of continuous service with the same employer.
+- **Formula**: **15 days of wages for every completed year of service**, calculated as `(last_drawn_monthly_wages * 15 * years_of_service) / 26` for establishments paying monthly wages.
+- **Statutory cap**: INR 20,00,000 (20 lakh) for private-sector employees (raised by the Central Government from time to time).
+- **Payable on**: resignation, retirement, death, disablement, and most categories of dismissal. **Not** payable where dismissal is for misconduct involving moral turpitude or causing financial loss to the employer.
+- **5-year vesting edge case**: several High Courts (notably the Madras High Court in *Mettur Beardsell* and similar lines) have treated **4 years and 240 days** of continuous service as equivalent to 5 years for gratuity purposes. The Supreme Court has not given a definitive nationwide ruling. Outcomes vary by State of the employer's registered office and the High Court whose jurisdiction governs.
+
+### Provident Fund and ESI on separation
+
+On separation, the employer must:
+
+- **Settle or transfer the Employees' Provident Fund (EPF) account** via the EPFO online portal. The employee elects either withdrawal (subject to tax rules) or transfer to the new employer's PF account.
+- **Deregister from ESI** where the employee was covered (typically wages below the ESI threshold) and complete any pending contribution settlement.
+
+These are administrative steps with statutory timelines; non-compliance carries penalties and, in extreme cases, criminal liability for the employer. An automated engine should not pretend to manage these flows.
+
+### Why the engine returns "jurisdiction not covered"
+
+Four structural reasons justify the exclusion.
+
+1. The **State** plus **establishment size** plus **workman classification** matrix produces a branching tree too wide for hardcoded rules to remain accurate without continuous State-by-State maintenance.
+2. The **partial notification status of the new Labor Codes** means the controlling statute itself is a State-by-State question, and that status changes over time.
+3. The **workman classification** issue is fact-intensive and routinely litigated; a machine cannot resolve it ex ante.
+4. The **gratuity vesting edge case** and similar judge-made glosses on apparently mechanical rules mean even the "easy" numeric computations have litigated exceptions whose application turns on jurisdiction.
+
+Returning a confident statutory answer ("retrenchment compensation = 15 days per year, end of analysis") would mask all four sources of variability. The safe default is escalation to Indian employment counsel familiar with the relevant State, sector, and establishment-size band.
+
+### Sources
+
+- India Code **Industrial Disputes Act 1947**: <https://www.indiacode.nic.in/handle/123456789/1414>
+- India Code **Payment of Gratuity Act 1972**: <https://www.indiacode.nic.in/handle/123456789/1394>
+- India Code **Industrial Employment (Standing Orders) Act 1946**: <https://www.indiacode.nic.in/handle/123456789/2326>
+- India Code **Employees' Provident Funds and Miscellaneous Provisions Act 1952**: <https://www.indiacode.nic.in/handle/123456789/1442>
+- India Code **Employees' State Insurance Act 1948**: <https://www.indiacode.nic.in/handle/123456789/1438>
+- India Code **Code on Wages 2019**: <https://www.indiacode.nic.in/handle/123456789/11586>
+- India Code **Industrial Relations Code 2020**: <https://www.indiacode.nic.in/handle/123456789/15510>
+- India Code **Code on Social Security 2020**: <https://www.indiacode.nic.in/handle/123456789/15514>
+- India Code **Occupational Safety, Health and Working Conditions Code 2020**: <https://www.indiacode.nic.in/handle/123456789/15512>
+- Maharashtra State **Shops and Establishments (Regulation of Employment and Conditions of Service) Act 2017**: <https://mahakamgar.maharashtra.gov.in/>
+- Karnataka State **Shops and Commercial Establishments Act 1961**: <https://labour.karnataka.gov.in/>
+- Ministry of Labour and Employment **New Labour Codes Notification Tracker**: <https://labour.gov.in/>
+- EPFO **Employer Portal and Member Settlement Guidance**: <https://www.epfindia.gov.in/>
+- Baker McKenzie *Global Employer Guide: India*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: India*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+- Nishith Desai Associates *Employment Law in India* research papers: <https://www.nishithdesai.com/>
+
+---
+
 ## Engine integration notes
 
 The rules engine in `mcp_servers/jurisdiction_server.py` should expose the following deterministic outputs derived from this document:

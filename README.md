@@ -96,7 +96,7 @@ Tools are MCP servers: separate logical units with a defined protocol contract. 
 | 5 | Policy RAG server (5 docs, Pinecone, structural chunking) | ✅ |
 | 6 | Conflict resolver + write gating + escalation UI | ✅ |
 | 7 | UI polish | ✅ |
-| 8 | Expand jurisdiction (batch A: UK + FR + ES shipped; batches B + C pending) | 🟡 |
+| 8 | Expand jurisdiction (batch A: UK + FR + ES; batch B: IT + SG + ZA + US-TX + US-NY; batch C: JP + IN graceful-fallback docs) | ✅ |
 | 9 | Hardening: rate limit, prompt caching, CI | ✅ |
 | 10 | Custom domain, portfolio launch | ✅ |
 
@@ -132,7 +132,7 @@ Tools are MCP servers: separate logical units with a defined protocol contract. 
 | Texas (US-TX) | full-time | Texas Labor Code §61 (Payday Law), Chapter 21 (TCHRA); federal WARN (no state WARN supplement); Sabine Pilot doctrine |
 | New York (US-NY) | full-time | NY Labor Law §191, §198, §740, §860 et seq. (NY WARN, broader than federal); NYSHRL; NYC HRL |
 
-Other countries return a structured *"not covered, recommend legal review"* response. Only JP and IN remain pending in Phase 8 (as graceful-fallback sections). Batch A (UK + FR + ES), Batch B1 (IT + SG + ZA), and Batch B2 (US-TX + US-NY) shipped.
+Other countries return a structured *"not covered, recommend legal review"* response. Japan and India in particular are deliberately out of scope: `docs/jurisdiction.md` includes dedicated sections explaining the regulatory landscape (Japan's LCA Art. 16 just-cause doctrine and seiri kaiko four-factor case-law test; India's State-by-State Shops Acts, IDA workman classification, establishment-size thresholds, and the partial-notification status of the 2019/2020 Labor Codes) and why neither admits a safe deterministic rule. Phase 8 complete.
 
 ---
 
