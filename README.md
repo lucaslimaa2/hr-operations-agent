@@ -70,12 +70,6 @@ Tools sit behind the MCP protocol contract, not in the agent. Each server is one
 
 ---
 
-## Status
-
-Phases 0 through 10 are complete; the live deploy at [hr-agent.lucaslima.xyz](https://hr-agent.lucaslima.xyz) reflects the current `main`.
-
----
-
 ## Stack
 
 - **Python 3.12** managed with [`uv`](https://docs.astral.sh/uv/)
@@ -122,43 +116,6 @@ The system handles all of these end-to-end:
 6. *"What severance is Carlos entitled to?"* : HRIS + jurisdiction (ES despido objetivo, 20 days per year of service)
 7. *"What are our offboarding steps?"* : policy only
 8. *"Lay off 60 people at our 200-employee California office."* : Cal-WARN trigger demonstration
-
----
-
-## Quickstart
-
-```bash
-git clone https://github.com/lucaslimaa2/hr-operations-agent.git
-cd hr-operations-agent
-uv sync
-
-# Create a .env file at the project root with these keys:
-#   ANTHROPIC_API_KEY=sk-ant-...
-#   OPENAI_API_KEY=sk-proj-...
-#   SUPABASE_URL=https://<project>.supabase.co
-#   SUPABASE_KEY=<service-role key>
-#   SUPABASE_DB_URL=postgresql://postgres:<password>@db.<project>.supabase.co:5432/postgres
-#   SUPABASE_DB_POOLER_URL=postgresql://postgres.<project>:<password>@<region>.pooler.supabase.com:6543/postgres
-#   PINECONE_API_KEY=pcsk_...
-#   PINECONE_INDEX=hr-policies
-
-# One-time setup: apply schema via Supabase SQL editor (db/schema.sql)
-# Create Pinecone index 'hr-policies' (1536 dims, cosine, serverless)
-
-# Smoke test all four services
-uv run python scripts/smoke_test.py
-
-# Seed mock employees + policy corpus
-uv run python scripts/seed_data.py
-uv run python scripts/seed_policies.py
-
-# Run the agent end-to-end from CLI
-uv run python -m agent.orchestrator "What's the minimum notice in Germany?"
-
-# Or run the full app (UI + API) locally
-uv run uvicorn api.index:app --host 127.0.0.1 --port 8000
-# open http://127.0.0.1:8000
-```
 
 ---
 
