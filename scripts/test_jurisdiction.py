@@ -327,6 +327,109 @@ SCENARIOS: list[Scenario] = [
             f"compliant={r.get('compliant')}, mentions Art. 51: {'Art. 51' in r.get('citation', '')}",
         ),
     ),
+    # ---------- IT (Phase 8 batch B1) ----------
+    Scenario(
+        description=(
+            "IT notice — 3yr impiegato (Commercio CCNL 3°-4° livello default) → 30 days.\n"
+            "        Tenure <5 years bracket; CCNL controls in practice but this is the default reference."
+        ),
+        call_repr="get_notice_period('IT', tenure_months=36)",
+        call=lambda: get_notice_period("IT", 36),
+        predicate=expect_notice_days(30),
+    ),
+    Scenario(
+        description=(
+            "IT notice — 12yr impiegato → 60 days (>10yr bracket, Commercio CCNL default).\n"
+            "        Quadri / dirigenti would receive materially more under their own CCNL schedules."
+        ),
+        call_repr="get_notice_period('IT', tenure_months=144)",
+        call=lambda: get_notice_period("IT", 144),
+        predicate=expect_notice_days(60),
+    ),
+    Scenario(
+        description=(
+            "IT licenziamento collettivo — 8 dismissals at 100-employee firm triggers Legge 223/1991.\n"
+            "        Thresholds: 15+ employees AND 5+ dismissals in 120 days at same provincia."
+        ),
+        call_repr="validate_action('mass_layoff', 'IT', {total_employees: 100, affected_count: 8})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "IT",
+            {"total_employees": 100, "affected_count": 8},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "Legge 223/1991" in r.get("citation", ""),
+            f"compliant={r.get('compliant')}, mentions Legge 223/1991: {'Legge 223/1991' in r.get('citation', '')}",
+        ),
+    ),
+    # ---------- SG (Phase 8 batch B1) ----------
+    Scenario(
+        description=(
+            "SG notice — 1yr employee → 7 days (1 week) under Employment Act §10.\n"
+            "        Bracket 26 weeks to <2 years tenure."
+        ),
+        call_repr="get_notice_period('SG', tenure_months=12)",
+        call=lambda: get_notice_period("SG", 12),
+        predicate=expect_notice_days(7),
+    ),
+    Scenario(
+        description=(
+            "SG notice — 6yr employee → 28 days (4 weeks) under Employment Act §10.\n"
+            "        Bracket 5+ years tenure. Contracts almost always extend for PMEs."
+        ),
+        call_repr="get_notice_period('SG', tenure_months=72)",
+        call=lambda: get_notice_period("SG", 72),
+        predicate=expect_notice_days(28),
+    ),
+    Scenario(
+        description=(
+            "SG MRN — 8 retrenchments at a 60-employee firm triggers MOM filing requirement.\n"
+            "        10+ employees AND 5+ retrenchments in any 6-month period requires the Mandatory Retrenchment Notification."
+        ),
+        call_repr="validate_action('mass_layoff', 'SG', {total_employees: 60, affected_count: 8})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "SG",
+            {"total_employees": 60, "affected_count": 8},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "MRN" in r.get("citation", ""),
+            f"compliant={r.get('compliant')}, mentions MRN: {'MRN' in r.get('citation', '')}",
+        ),
+    ),
+    # ---------- ZA (Phase 8 batch B1) ----------
+    Scenario(
+        description=(
+            "ZA notice — 3mo tenure → 7 days (1 week) under BCEA §37.\n        Less than 6 months tenure bracket."
+        ),
+        call_repr="get_notice_period('ZA', tenure_months=3)",
+        call=lambda: get_notice_period("ZA", 3),
+        predicate=expect_notice_days(7),
+    ),
+    Scenario(
+        description=(
+            "ZA notice — 2yr tenure → 28 days (4 weeks) under BCEA §37.\n        More than 1 year tenure bracket."
+        ),
+        call_repr="get_notice_period('ZA', tenure_months=24)",
+        call=lambda: get_notice_period("ZA", 24),
+        predicate=expect_notice_days(28),
+    ),
+    Scenario(
+        description=(
+            "ZA retrenchment — 15 affected at 100-employee firm triggers LRA §189A (large-scale).\n"
+            "        50+ employees AND scaled threshold triggers extended 60-day consultation."
+        ),
+        call_repr="validate_action('mass_layoff', 'ZA', {total_employees: 100, affected_count: 15})",
+        call=lambda: validate_action(
+            "mass_layoff",
+            "ZA",
+            {"total_employees": 100, "affected_count": 15},
+        ),
+        predicate=lambda r: (
+            r.get("compliant") is False and "189A" in r.get("citation", ""),
+            f"compliant={r.get('compliant')}, mentions §189A: {'189A' in r.get('citation', '')}",
+        ),
+    ),
     # ---------- Graceful fallback for uncovered country ----------
     Scenario(
         description=(

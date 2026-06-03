@@ -905,6 +905,439 @@ Now scenario B: same employee, but the Juzgado de lo Social finds the economic c
 
 ---
 
+## Italy (IT)
+
+### Employment relationship overview
+
+Italian employment law combines the **Codice Civile** (master civil code, governing the employment contract as a species of subordinate work obligation) with a layered set of statutes (the **Statuto dei Lavoratori**, the **Jobs Act**, the **Law 223/1991** collective dismissal framework) and an extensive network of national collective bargaining agreements (**CCNL**, contratti collettivi nazionali di lavoro) that fix the operational detail of notice periods, leave, and severance treatments. The applicable CCNL is determined by the employer's sector (Commercio, Metalmeccanico, Credito, etc.) and the employee's qualifica (operaio, impiegato, quadro, dirigente). The engine treats the **Commercio CCNL impiegato** schedule as the default reference and flags that the sectoral CCNL actually applicable to the employer controls in practice.
+
+#### Legal framework
+
+- **Codice Civile, Art. 2118 to 2120**: notice (Art. 2118), giusta causa (Art. 2119), and trattamento di fine rapporto (TFR, Art. 2120).
+- **Statuto dei Lavoratori (Legge 20 maggio 1970, n. 300)**: foundational employee-protection statute. **Art. 18** historically required reinstatement at firms with 15+ employees for unfair dismissals; partially superseded by the Jobs Act for new hires from 7 March 2015.
+- **Legge 15 luglio 1966, n. 604**: requires a written, justified dismissal letter and sets the giustificato motivo framework.
+- **Legge 23 luglio 1991, n. 223 (Arts. 4 and 5)**: licenziamento collettivo procedure.
+- **Jobs Act, Decreto Legislativo 4 marzo 2015, n. 23**: introduced the **contratto a tutele crescenti** for new hires from 7 March 2015, replacing reinstatement with monetary indemnity in most unfair-dismissal cases.
+- **Decreto Legislativo 26 marzo 2001, n. 151**: protection of pregnant employees and parents (Art. 54 prohibits dismissal during pregnancy and the first year of the child's life).
+- **CCNL**: sector-level collective agreements. The Commercio CCNL is treated as the engine's default reference for white-collar impiegato roles; the Metalmeccanico, Credito, Studi Professionali, and other CCNL govern in their respective sectors.
+
+### Notice period rules (preavviso, Art. 2118 CC)
+
+Statutory Art. 2118 requires "congruo preavviso" but defers the schedule to the CCNL. The **Commercio CCNL** impiegato schedule, used here as the default reference, scales by qualifica and tenure:
+
+| Qualifica (Commercio CCNL, impiegato default) | Tenure <5 yrs | Tenure 5 to 10 yrs | Tenure >10 yrs |
+|---|---|---|---|
+| Quadri / 1° livello | 60 days | 90 days | 120 days |
+| 2° livello | 45 days | 60 days | 75 days |
+| 3° livello | 30 days | 45 days | 60 days |
+| 4° to 7° livello | 20 days | 30 days | 45 days |
+
+- The engine's default for a white-collar impiegato at the 3°/4° livello is **30 days at <5 years tenure, scaling to 60 days at 10+ years**; for dirigenti and quadri, durations are materially longer and should be looked up against the actual CCNL.
+- The applicable sectoral CCNL controls in practice; the schedule above is illustrative for the default Commercio impiegato case.
+- Notice runs from the 1st or the 16th of the calendar month (a CCNL convention known as the "regola della quindicina") in most agreements; verify the exact rule against the controlling CCNL.
+- Notice can be worked or paid in lieu (**indennità sostitutiva del preavviso**) at the employer's election (Art. 2118 CC).
+- **No notice** is owed where the dismissal is for **giusta causa** (Art. 2119 CC): conduct so serious that the employment relationship cannot continue even temporarily.
+
+### TFR (trattamento di fine rapporto, Art. 2120 CC)
+
+TFR is a deferred-compensation entitlement that accrues each year of service and is paid on **any termination**, including voluntary resignation, dismissal for any cause (including giusta causa), retirement, and end of fixed-term contracts. It is a hard statutory entitlement and cannot be waived.
+
+```
+# Annual TFR accrual under Art. 2120 CC
+tfr_accrual_year_n = gross_annual_salary_year_n / 13.5
+# Roughly 7.41% per year (1/13.5 = 0.07407...), NOT the often-quoted 8.33%.
+
+# Annual revaluation of the cumulative TFR stock under Art. 2120 para. 4:
+#   revaluation_rate = 1.5% fixed + 75% of the annual ISTAT cost-of-living index
+tfr_stock_year_end = (tfr_stock_year_start + tfr_accrual_year_n) * (1 + revaluation_rate)
+```
+
+- Statutory formula: **gross annual salary divided by 13.5** per year of service. This works out to approximately 7.41% (1 / 13.5), not the 8.33% (1 / 12) sometimes quoted in informal sources. The 13.5 denominator dates from a legislative quirk and is the figure that appears in Art. 2120.
+- The accrued TFR stock is **revalued annually** at a fixed 1.5% plus 75% of the ISTAT cost-of-living index for the year (Art. 2120 para. 4).
+- The employee may opt to redirect ongoing TFR accruals to a supplementary pension fund (fondo pensione) under D.Lgs. 252/2005; the employer's payment obligation transfers to the fund but the underlying accrual mechanic is unchanged.
+- A statutory advance of up to 70% of accrued TFR is available after 8 years of service for specific purposes (purchase of first home, medical expenses; Art. 2120 paras. 6 to 11).
+- For small firms (<50 employees), TFR is paid directly by the employer at termination; for larger firms, the **Fondo di Tesoreria** managed by INPS receives the contributions and pays the employee on termination.
+
+### Grounds for termination
+
+- **Giustificato motivo soggettivo** (Legge 604/1966 Art. 3, second limb): notable breach of contractual obligations short of giusta causa. Notice is owed; TFR and accrued items paid in full.
+- **Giustificato motivo oggettivo** (Legge 604/1966 Art. 3, first limb): reasons inherent to the productive activity, work organisation, or its regular functioning. Examples: role suppression, economic difficulties at the unit level, technological reorganisation. Notice is owed; TFR and accrued items paid in full. Where the dismissal is for economic reasons, the employer should have considered redeployment (repêchage) within the firm.
+- **Giusta causa** (Codice Civile Art. 2119): conduct so serious that the relationship cannot continue even for the duration of the notice period. Examples: theft from the employer, gross insubordination, serious breach of fiduciary duty. **No notice**, but TFR and accrued vacation are still paid.
+- **Licenziamento collettivo** (Legge 223/1991): firms with **15+ employees** proposing **5+ dismissals** within the same provincia within a **120-day period**. Triggers a mandatory consultation procedure (see below).
+
+### Termination procedure for individual dismissals
+
+Under **Legge 604/1966 Art. 2**, every dismissal must be:
+
+1. **In writing** (forma scritta ad substantiam). An oral dismissal is null and the employee can demand reinstatement regardless of firm size or hire date.
+2. **Motivated in writing**, with the specific grounds set out in the letter. The grounds bind the employer in any subsequent litigation; new grounds cannot be added later.
+3. **Notified** to the employee (registered letter with acknowledgement of receipt, hand delivery against signed receipt, or PEC certified email).
+
+For **giustificato motivo soggettivo and giusta causa**, the disciplinary procedure under **Art. 7 of the Statuto dei Lavoratori** must be followed: written contestation of the disciplinary facts (contestazione disciplinare), minimum 5-day window for the employee to provide written defence and request a hearing, then the dismissal letter. Skipping these steps renders the dismissal procedurally defective.
+
+For **giustificato motivo oggettivo** at firms with **15+ employees** and hires **before 7 March 2015**, the prior conciliation procedure before the **Ispettorato Territoriale del Lavoro** is required (Legge 604/1966 Art. 7 as amended by Legge 92/2012, Fornero reform). The Jobs Act removed this for new hires under the contratto a tutele crescenti.
+
+### Unfair dismissal regimes (tutele crescenti vs Art. 18)
+
+The applicable regime depends on the **date of hire** and the **firm size**.
+
+#### Hires from 7 March 2015 (contratto a tutele crescenti, D.Lgs. 23/2015)
+
+- **Firms with 15+ employees**: monetary indemnity in most cases, calibrated by tenure. Indemnity for unfair dismissal on substantive grounds: **2 months' salary per year of service, with a floor of 6 months and a ceiling of 36 months** (D.Lgs. 23/2015 Art. 3.1, as amended after Constitutional Court ruling 194/2018 struck down the original rigid formula).
+- **Firms under 15 employees**: floor of 3 months, ceiling of 6 months (Art. 9).
+- Reinstatement is reserved for **dismissal that is null** (discrimination, retaliation, pregnancy, oral form) and for **manifest fact-finding defects** (i.e., the alleged misconduct did not occur; Art. 3.2).
+
+#### Hires before 7 March 2015 (Statuto dei Lavoratori Art. 18, as modified by Fornero reform)
+
+- **Firms with 15+ employees**: graduated regime introduced by the Fornero reform (Legge 92/2012). Reinstatement remains available for the most serious categories of unfair dismissal (discriminatory, retaliatory, lacking material grounds entirely). For ordinary unfair dismissal on inadequate grounds, the remedy is an indemnity of 12 to 24 months' salary (Art. 18 paras. 4 to 7).
+- **Firms under 15 employees**: indemnity of 2.5 to 6 months' salary under Legge 604/1966 Art. 8, no reinstatement.
+
+### Licenziamento collettivo (Legge 223/1991, Arts. 4 and 5)
+
+Applies to firms with **15+ employees** proposing **5+ dismissals at the same provincia within a 120-day period** for the same economic / organisational reasons. The procedure has three phases:
+
+1. **Comunicazione di avvio** (Art. 4 para. 2): written notification to the **RSU** (rappresentanze sindacali unitarie) or to the sectoral unions, and concurrently to the **Ufficio Provinciale del Lavoro** and **Direzione Provinciale del Lavoro**. The notification details the reasons, the number and profiles of affected employees, the proposed timeline, and the selection criteria.
+2. **Esame congiunto** (consultation, Art. 4 paras. 5 to 8): joint examination with union representatives over a maximum of 45 days (extendable). The aim is to identify alternatives, redeployment options, and to negotiate selection criteria.
+3. **Notification of dismissals** (Art. 4 para. 9): if no agreement is reached, the employer notifies the labour authority of the outcome of the consultation and proceeds with individual dismissal letters, applying the agreed or statutorily required selection criteria (carichi di famiglia, anzianità di servizio, esigenze tecnico-produttive e organizzative; Art. 5).
+
+Failure to follow the procedure exposes the employer to dismissal annulment (with the same remedies as unfair individual dismissal under the applicable regime) plus potential collective sanctions.
+
+### Edge cases
+
+- **Pregnant employees and parents** (D.Lgs. 151/2001 Art. 54): dismissal is prohibited from the start of pregnancy until the child's first birthday. Narrow exceptions: giusta causa, cessation of the firm's activity, end of fixed-term contract, or completion of the task for which the worker was hired. Dismissal in violation is null.
+- **Employees on sick leave for work-related injury or illness** (Codice Civile Art. 2110): employment is protected for a "periodo di comporto" determined by the applicable CCNL (typically 6 to 12 months). Dismissal during the comporto for absence-related reasons is null.
+- **Union representatives** (Statuto dei Lavoratori Art. 22): transfers and dismissals of RSA / RSU members require prior consent of the union or judicial authorisation.
+- **Parental leave** (D.Lgs. 151/2001): protection extends to fathers exercising parental leave rights.
+- **Dirigenti**: senior managers have a separate regime. Termination requires "giustificatezza" rather than "giustificato motivo" (a lower standard); CCNL Dirigenti del Commercio and equivalent agreements set additional severance ("indennità supplementare") payable on unjustified termination.
+
+### Worked example
+
+Scenario: white-collar **impiegato 3° livello** under the Commercio CCNL, hired on **1 September 2020** (post-7 March 2015, so contratto a tutele crescenti applies), firm has **80 employees**, gross annual salary EUR 36,000 (13 monthly payments of EUR 2,770 approximately, plus thirteenth month). Dismissal date **15 December 2026** for giustificato motivo oggettivo (role suppression following reorganisation).
+
+1. **Tenure at dismissal**: 6 years 3 months.
+2. **Notice (preavviso)**: Commercio CCNL impiegato 3° livello, tenure 5 to 10 years → **45 days**. Paid as indennità sostitutiva (PILON-equivalent): 45/30 × EUR 2,770 ≈ **EUR 4,155**.
+3. **TFR accrued through dismissal**:
+   - Annual accrual: EUR 36,000 / 13.5 = EUR 2,667 per year.
+   - 6.25 years of accruals, with annual revaluation. Ignoring revaluation for simplicity: 6.25 × EUR 2,667 ≈ **EUR 16,667**. With cumulative revaluation at average 2% per year, the actual stock would be approximately **EUR 17,200 to EUR 17,500**.
+4. **Pro-rata thirteenth month** (tredicesima) accrued January through 15 December: approximately 11.5/12 × EUR 2,770 ≈ **EUR 2,655**.
+5. **Pro-rata fourteenth month** if the CCNL provides one (Commercio does not; some sectors do): EUR 0 in this scenario.
+6. **Vacation accrued but untaken**: assume 10 days at EUR 2,770/22 ≈ EUR 126/day → **EUR 1,260**.
+7. **Total exit cost**: approximately **EUR 25,700 to EUR 26,000** before social charges on salary components.
+
+If the Tribunale del Lavoro had subsequently found the giustificato motivo oggettivo to be inadequately substantiated, the contratto a tutele crescenti regime would set an indemnity of 2 months' salary per year of service, here ≈ 12.5 months × EUR 2,770 = EUR 34,625, within the 6 to 36 month range under Art. 3.1 D.Lgs. 23/2015.
+
+### Sources
+
+- Normattiva **Codice Civile, Libro V, Titolo II, Capo I (Arts. 2094 to 2134)**: <https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:codice.civile>
+- Normattiva **Legge 20 maggio 1970, n. 300 (Statuto dei Lavoratori)**: <https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:legge:1970-05-20;300>
+- Normattiva **Legge 15 luglio 1966, n. 604**: <https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:legge:1966-07-15;604>
+- Normattiva **Legge 23 luglio 1991, n. 223**: <https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:legge:1991-07-23;223>
+- Normattiva **D.Lgs. 4 marzo 2015, n. 23 (Jobs Act, contratto a tutele crescenti)**: <https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2015-03-04;23>
+- Normattiva **D.Lgs. 26 marzo 2001, n. 151 (tutela genitorialità)**: <https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2001-03-26;151>
+- Corte Costituzionale, sentenza n. 194/2018 (illegittimità del meccanismo rigido di calcolo dell'indennità).
+- Ministero del Lavoro e delle Politiche Sociali **Cessazione del rapporto di lavoro**: <https://www.lavoro.gov.it/temi-e-priorita/rapporti-di-lavoro-e-relazioni-industriali>
+- INPS **TFR e Fondo di Tesoreria**: <https://www.inps.it/it/it/dettaglio-scheda.schede-servizio-strumento.schede-servizi.fondo-di-tesoreria-50441.fondo-di-tesoreria.html>
+- CCNL Commercio (Confcommercio / Filcams-Cgil, Fisascat-Cisl, Uiltucs-Uil): consultable via CNEL archive at <https://www.cnel.it/Archivio-Contratti>
+- Baker McKenzie *Global Employer Guide: Italy*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: Italy*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+
+---
+
+## Singapore (SG)
+
+### Employment relationship overview
+
+Singapore employment law is anchored in the **Employment Act (Chapter 91)**, supplemented by Ministry of Manpower (**MOM**) guidelines and the tripartite advisories produced jointly by MOM, the National Trades Union Congress (NTUC), and the Singapore National Employers Federation (SNEF). The Employment Act covers all employees earning up to certain thresholds and most managerial / executive staff after the 2019 amendments, with carve-outs for seafarers, domestic workers, and public-sector employees governed by separate regimes. Disputes flow through mandatory mediation at the **Tripartite Alliance for Dispute Management (TADM)** before reaching the **Employment Claims Tribunal (ECT)**.
+
+#### Legal framework
+
+- **Employment Act (Chapter 91)**: the master statute. Notice in **§10**, dismissal in **§14**, retrenchment-related provisions and salary in lieu in **Part IV**.
+- **Tripartite Advisory on Managing Excess Manpower and Responsible Retrenchment (December 2020, updated)**: MOM / NTUC / SNEF guidance on retrenchment process and benefit norms.
+- **Tripartite Guidelines on Wrongful Dismissal (2019)**: define the categories of dismissal considered wrongful (dismissal without notice or salary in lieu absent misconduct, dismissal to deprive the employee of statutory entitlements, discriminatory dismissal, etc.).
+- **Tripartite Guidelines on Fair Employment Practices (TGFEP)**: the workplace fairness framework; statutory enactment expected via the Workplace Fairness Legislation (Workplace Fairness Act, passed 2025, phased commencement).
+- **Employment Claims Act 2016**: established the ECT and the mandatory TADM mediation step.
+- **Industrial Relations Act**: governs collective bargaining via registered trade unions; less salient for individual termination than the Employment Act.
+
+### Notice period rules (§10 Employment Act)
+
+Statutory minimum notice applies where the employment contract is silent or specifies a shorter period. The longer of contract or statutory minimum prevails. Either party may pay salary in lieu (§11).
+
+| Tenure | Statutory minimum notice (§10) |
+|---|---|
+| Less than 26 weeks | 1 day |
+| 26 weeks to <2 years | 1 week |
+| 2 to <5 years | 2 weeks |
+| 5+ years | 4 weeks |
+
+- The statutory schedule is symmetrical: the same minima apply whether the termination is employer-initiated or employee-initiated.
+- Employment contracts almost universally extend notice beyond the statutory minimum, particularly for professional and managerial roles (typically 1 to 3 months).
+- **Salary in lieu of notice** is calculated under §11 at the employee's "gross rate of pay" excluding overtime, bonuses, and reimbursements.
+- **No notice** is required where the dismissal is for misconduct after due inquiry (§14(1)); the employer must conduct an inquiry before summary dismissal.
+
+### Termination and severance
+
+#### Routine termination (with notice or salary in lieu)
+
+- Employee is entitled to salary through last day worked, salary in lieu of any unworked notice, and accrued but unused annual leave (§43 Employment Act).
+- **No statutory severance** is owed on ordinary termination outside the retrenchment context.
+- Final salary must be paid on the last day of employment where practicable, and in any event within 3 working days (§22 Employment Act).
+
+#### Retrenchment (redundancy)
+
+Retrenchment is treated as a distinct category. There is **no statutory severance entitlement**, but a strong tripartite norm based on the MOM Tripartite Advisory:
+
+- **Customary retrenchment benefit: 2 weeks to 1 month of salary per year of service** for employees with **at least 2 years** of service.
+- Employees with under 2 years of service typically receive an **ex-gratia goodwill payment** rather than a benefit calibrated by tenure.
+- Where a collective agreement applies, its retrenchment benefit clause controls (typically more generous).
+- The actual amount varies by industry, employer financial condition, and union agreement. Profitable employers in good standing are expected to pay at the upper end of the band.
+
+#### Mandatory Retrenchment Notification (MRN)
+
+Under MOM rules effective since 1 November 2021, employers with **10 or more employees** must notify MOM via the **Mandatory Retrenchment Notification (MRN)** of any retrenchment exercise involving **5 or more employees within any 6-month period**. The notification is filed online via the MyMOM Portal within **5 working days** of notifying the affected employees. The MRN data feeds into MOM's employment-support programmes (e.g., Workforce Singapore career-matching support).
+
+#### Foreign workers
+
+Foreign employees on **Employment Pass (EP), S Pass, or Work Permit** require additional steps:
+
+- The employer must **cancel the work pass within 7 days** of the last day of employment via the MOM EP Online or Work Permit Online portal.
+- The employer is responsible for **repatriation costs** to the worker's home country if no alternative employment is secured (§85 Employment of Foreign Manpower Act for Work Permit holders; similar contractual obligation typically embedded in EP / S Pass terms).
+- The foreign worker is given a short grace period (typically 30 days for EP holders) to find new employment and have a new pass approved, failing which they must leave Singapore.
+
+### Wrongful dismissal and the dispute pathway
+
+Under the **Tripartite Guidelines on Wrongful Dismissal**, dismissal is wrongful where:
+
+- The employer dismisses without notice or salary in lieu absent misconduct that warrants summary dismissal.
+- The dismissal is aimed at depriving the employee of statutory entitlements due to vest imminently (e.g., dismissal just before a maternity-protected period).
+- The dismissal is on discriminatory grounds (age, race, gender, religion, nationality, family status, disability, mental health). With the **Workplace Fairness Act** coming into phased force, these grounds gain explicit statutory protection beyond the existing tripartite norm.
+- The dismissal is in retaliation for the employee exercising statutory rights (filing a salary claim, reporting workplace safety violations).
+
+The dispute pathway:
+
+1. **TADM mediation** (mandatory): the claimant lodges the dispute online; TADM convenes a mediator. Most disputes settle here.
+2. **Employment Claims Tribunal (ECT)**: where mediation fails, the dispute proceeds to the ECT. ECT jurisdiction covers salary-related claims (up to SGD 20,000, or SGD 30,000 with union representation) and wrongful-dismissal claims.
+3. Statute of limitations: the dismissal claim must be lodged at TADM within **1 month** of the last day of employment (Employment Claims Act).
+
+### Edge cases
+
+- **Probation**: not statutorily defined. Contractual probation periods are common (typically 3 to 6 months). Notice during probation often shortened by contract to 1 day or 1 week; the longer of contract or statutory minimum (§10) still applies.
+- **Pregnant employees**: under §84 Employment Act, an employee who has completed 3 months of service and notifies the employer of pregnancy is entitled to maternity protection. Dismissal without sufficient cause during pregnancy entitles her to maternity benefits as if not dismissed.
+- **Medical leave**: §86 prohibits dismissal during certified hospitalisation leave or while the employee is on certified sick leave.
+- **Domestic workers (foreign domestic helpers)**: governed by the Employment of Foreign Manpower Act and a separate set of MOM rules, not the Employment Act.
+- **Managerial and executive employees**: covered by the Employment Act since the 2019 amendments removed the prior salary cap that excluded most professionals, managers, and executives (PMEs) from Part IV protections. Notice provisions in §10 apply universally.
+- **Collective bargaining**: where a registered trade union has a collective agreement covering the employee, the CA terms (including any enhanced retrenchment benefit) apply.
+
+### Worked example
+
+Scenario: Singapore-based professional, **3 years 6 months tenure**, monthly gross salary SGD 8,000, retrenched due to organisational restructuring. Employer has 60 employees. Contract specifies 1 month notice.
+
+1. **Notice**: contract (1 month) vs statutory (§10, 2 to <5 years tenure = 2 weeks). Contract applies as it is the longer period → **1 month notice**, paid as salary in lieu = **SGD 8,000**.
+2. **Retrenchment benefit**: tripartite norm of 2 weeks to 1 month per year of service, 3.5 years tenure.
+   - Lower bound (2 weeks/year): 3.5 × (SGD 8,000 / 2) ≈ **SGD 14,000**.
+   - Upper bound (1 month/year): 3.5 × SGD 8,000 = **SGD 28,000**.
+   - Assume mid-band practice for a profitable employer: approximately **SGD 21,000**.
+3. **Accrued but unused annual leave**: assume 8 days untaken at SGD 8,000 / 21 working days ≈ SGD 381/day → **SGD 3,048**.
+4. **Final salary**: through last day worked, paid within 3 working days of termination.
+5. **MRN notification**: if this retrenchment is part of an exercise involving 5+ employees within 6 months and the employer has 10+ employees, the employer files the Mandatory Retrenchment Notification within 5 working days.
+6. **Total exit cost (excluding routine salary)**: approximately **SGD 32,000** at the mid-band retrenchment benefit, plus statutory contributions and any CPF obligations on salary components.
+
+If instead this had been a summary dismissal without due inquiry, the employee would have had **1 month from the last day of employment** to lodge a wrongful-dismissal claim at TADM, with potential remedies including reinstatement (rare) or compensation in lieu (typical).
+
+### Sources
+
+- Singapore Statutes Online **Employment Act 1968 (Chapter 91)**: <https://sso.agc.gov.sg/Act/EmA1968>
+- Singapore Statutes Online **Employment Claims Act 2016**: <https://sso.agc.gov.sg/Act/ECA2016>
+- Singapore Statutes Online **Employment of Foreign Manpower Act 1990**: <https://sso.agc.gov.sg/Act/EFMA1990>
+- Singapore Statutes Online **Workplace Fairness Act 2025**: <https://sso.agc.gov.sg/Acts-Supp/3-2025/>
+- MOM **Tripartite Advisory on Managing Excess Manpower and Responsible Retrenchment**: <https://www.mom.gov.sg/employment-practices/retrenchment>
+- MOM **Mandatory Retrenchment Notifications**: <https://www.mom.gov.sg/employment-practices/retrenchment/mandatory-retrenchment-notifications>
+- MOM **Tripartite Guidelines on Wrongful Dismissal**: <https://www.mom.gov.sg/employment-practices/termination-of-employment/wrongful-dismissal>
+- MOM **Tripartite Guidelines on Fair Employment Practices (TGFEP)**: <https://www.tal.sg/tafep/Resources/Tripartite-Guidelines>
+- Tripartite Alliance for Dispute Management **TADM**: <https://www.tal.sg/tadm>
+- State Courts of Singapore **Employment Claims Tribunal**: <https://www.judiciary.gov.sg/employment-claims>
+- Baker McKenzie *Global Employer Guide: Singapore*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: Singapore*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+
+---
+
+## South Africa (ZA)
+
+### Employment relationship overview
+
+South African employment law is built on a constitutional foundation (the right to fair labour practices, §23 of the Constitution) operationalised through two principal statutes: the **Basic Conditions of Employment Act (BCEA)** sets minimum substantive terms (notice, leave, severance), and the **Labour Relations Act (LRA)** governs dismissal fairness, collective bargaining, and the dispute-resolution architecture centred on the **Commission for Conciliation, Mediation and Arbitration (CCMA)**. Every dismissal must pass a dual test: **fair reason** AND **fair procedure**. Failing either renders the dismissal unfair, with reinstatement as the default remedy.
+
+#### Legal framework
+
+- **Constitution of the Republic of South Africa, 1996, §23**: right to fair labour practices.
+- **Labour Relations Act 66 of 1995 (LRA)**: the master statute on dismissal. **§185** (right not to be unfairly dismissed), **§188** (fair reason and fair procedure), **§189** (operational requirements / retrenchment), **§189A** (large-scale retrenchments), **§187** (automatically unfair dismissals), **§197** (transfer of business as going concern).
+- **Basic Conditions of Employment Act 75 of 1997 (BCEA)**: **§37** (notice periods), **§41** (severance pay on retrenchment), **§40** (payments on termination).
+- **Employment Equity Act 55 of 1998 (EEA)**: anti-discrimination and affirmative-action framework.
+- **Code of Good Practice: Dismissal** (Schedule 8 to the LRA): the procedural standard for misconduct and incapacity dismissals.
+- **CCMA Rules**: govern conciliation and arbitration procedure.
+
+### Notice period rules (BCEA §37)
+
+Statutory minimum notice, employer-initiated or employee-initiated:
+
+| Tenure | Statutory minimum notice (BCEA §37) |
+|---|---|
+| Less than 6 months | 1 week |
+| 6 months to 1 year | 2 weeks |
+| More than 1 year | 4 weeks |
+
+- The contract may extend the statutory minimum but cannot shorten it (BCEA §37(2) and §49).
+- **Domestic workers and farm workers** previously had distinct schedules; the 2018 BCEA amendments and Sectoral Determinations have aligned most categories to the schedule above, with limited differences remaining for specific sectors.
+- Notice must be given in writing, except where the employee is illiterate, in which case verbal notice is permitted (BCEA §37(4)).
+- **Payment in lieu of notice** is permitted (BCEA §38): the employer can pay the employee's remuneration for the notice period in lieu of working it.
+- **No notice** is owed for summary dismissal for serious misconduct, provided a fair procedure was followed under Schedule 8 of the LRA.
+
+### Substantive fairness (LRA §188)
+
+A dismissal is substantively fair only if the employer can show the reason is one of:
+
+- **Misconduct** (e.g., theft, dishonesty, gross insubordination, fraud, assault). Schedule 8 sets out the disciplinary framework.
+- **Incapacity** (poor performance or ill health). Distinct procedures: poor-performance dismissal requires prior counselling and a reasonable opportunity to improve; ill-health dismissal requires investigation into the extent of incapacity and consideration of alternatives.
+- **Operational requirements** (economic, technological, structural, or similar needs of the employer). This is the LRA's retrenchment category under §189.
+
+Dismissal for any other reason fails the substantive-fairness test.
+
+### Procedural fairness
+
+For misconduct and incapacity, the **Code of Good Practice: Dismissal** (Schedule 8) requires:
+
+- Investigation of the alleged misconduct or poor performance.
+- Written notification of the allegations and the disciplinary hearing.
+- A hearing at which the employee can state a case, be assisted by a co-employee or shop steward, and call witnesses.
+- A written outcome with reasons.
+- A right of internal appeal (typical but not statutorily mandated).
+
+Failure to follow procedural fairness renders the dismissal **procedurally unfair** even where the reason was sound; compensation may be ordered (typically up to 12 months' remuneration) without reinstatement.
+
+### Retrenchment (LRA §189): operational-requirements dismissal
+
+#### Small-scale retrenchment (§189)
+
+Applies to all retrenchments not meeting the §189A threshold. The procedure is a **joint consensus-seeking consultation**:
+
+1. **Written notice** (§189(3)): the employer issues a written notification to consult, including the reasons for the proposed retrenchment, the alternatives considered, the number and categories of employees likely to be affected, the proposed selection method, the proposed severance, the timing, and any assistance offered.
+2. **Consultation** with the affected employees or their representatives (workplace forum, trade union, or elected employee representatives) on:
+   - Alternatives to retrenchment.
+   - Measures to minimise the number of dismissals.
+   - Selection criteria.
+   - Severance and other terminal benefits.
+   - Assistance with finding alternative employment.
+3. **Selection criteria** must be fair and objective; LIFO (last-in, first-out) is the default fair criterion in the absence of agreement, though skill-based criteria are accepted where genuinely required.
+4. **Final notice** of retrenchment to affected employees.
+
+#### Severance pay (BCEA §41)
+
+```
+minimum_severance = 1 * weeks_remuneration * completed_years_of_service
+# "Remuneration" includes basic salary plus regular allowances.
+# Applies to dismissals on operational requirements grounds.
+# Refusal of a reasonable offer of alternative employment forfeits severance (§41(4)).
+```
+
+- **Minimum of 1 week's remuneration per completed year of service** (BCEA §41(2)).
+- Many employers and collective agreements provide enhanced severance (typically 2 to 4 weeks per year for managerial roles).
+- An employee who unreasonably refuses an offer of alternative employment forfeits the statutory severance (BCEA §41(4)).
+
+#### Large-scale retrenchment (LRA §189A)
+
+Triggered where the employer has **50+ employees** AND the retrenchment affects a threshold number based on workforce size:
+
+| Employer headcount | Threshold for §189A application |
+|---|---|
+| 50 to 200 | 10 employees retrenched |
+| 201 to 300 | 20 employees retrenched |
+| 301 to 400 | 30 employees retrenched |
+| 401 to 500 | 40 employees retrenched |
+| 500+ | 50 employees retrenched |
+
+Additionally, §189A applies where the cumulative retrenchments over a **12-month period** reach the threshold.
+
+§189A consultation differs from §189 in three respects:
+
+- **Minimum 60-day consultation period** before notices of dismissal may issue (§189A(7)).
+- **CCMA facilitator** may be appointed (either at the employer's request or by request of consulting parties representing the majority of affected employees) to facilitate the consultation.
+- Disputes may proceed via **strike action** (§189A(7)) or **adjudication at the Labour Court** (§189A(13)), rather than CCMA arbitration. The §189 standard CCMA pathway is unavailable.
+
+### CCMA dispute-resolution pathway
+
+For any dismissal claim, the LRA prescribes a structured pathway:
+
+1. **Referral to the CCMA** within **30 days of the dismissal** (LRA §191(1)(b)(i)). Late referrals require a condonation application showing good cause.
+2. **Conciliation** at the CCMA: a commissioner attempts to settle the dispute. Most disputes settle here.
+3. If conciliation fails (a certificate of non-resolution is issued), the matter proceeds to either:
+   - **CCMA arbitration** for misconduct and incapacity dismissal disputes (§191(5)(a)), with the award binding subject to limited review on Labour Court.
+   - **Labour Court adjudication** for retrenchment, automatically unfair dismissal, and other complex categories (§191(5)(b)).
+4. **Remedies** (LRA §193):
+   - **Reinstatement** with back-pay (the default for unfair dismissal absent compelling reasons against).
+   - **Re-employment** on different terms.
+   - **Compensation**: up to **12 months' remuneration** for ordinary unfair dismissal; up to **24 months' remuneration** for automatically unfair dismissal (LRA §194).
+
+### Automatically unfair dismissals (LRA §187)
+
+Dismissal is automatically unfair (no need to show ordinary unfairness; remedies enhanced) where the reason is:
+
+- Participation in protected industrial action.
+- Refusing to do work normally done by employees on strike.
+- Disclosure of information that the employee was lawfully entitled to disclose to a third party.
+- Pregnancy, intended pregnancy, or any reason related to pregnancy.
+- Discrimination on grounds of race, gender, sex, ethnic or social origin, sexual orientation, age, disability, religion, conscience, belief, political opinion, culture, language, marital status, or family responsibility.
+- Transfer of business as a going concern (§197) where the dismissal is for a reason related to the transfer.
+- Exercising any right conferred by the LRA.
+- Trade union activity or membership.
+
+Maximum compensation: **24 months' remuneration** (LRA §194(3)).
+
+### Edge cases
+
+- **Transfer of business as a going concern (§197)**: employees transfer automatically to the new employer on existing terms, with continuity of service preserved. Dismissals connected to the transfer are automatically unfair under §187(1)(g). The buyer inherits all collective agreements and any disciplinary or grievance matters in progress.
+- **Probationary employees**: subject to a lower bar for dismissal during probation, but not exempt from fairness. The Code of Good Practice (Schedule 8 item 8) requires the employer to evaluate, give reasonable evaluation and instruction, allow time for improvement, and give a hearing before terminating on probation grounds.
+- **Limited-duration contracts**: a series of fixed-term contracts may be deemed a permanent employment relationship (§198B), with non-renewal then constituting a dismissal.
+- **Sectoral Determinations**: certain sectors (domestic work, farm work, contract cleaning, private security, hospitality, wholesale and retail) are governed by Sectoral Determinations under the BCEA that set sector-specific minima. Where the Sectoral Determination is more favourable than the BCEA, it applies.
+- **Strike-related dismissal**: an employee dismissed for participating in a protected strike is automatically unfair (§187(1)(a)); participation in an unprotected strike may justify dismissal subject to fair procedure.
+- **Operational-requirements selection criteria challenge**: even where the §189 consultation is properly followed, the chosen selection criteria can be substantively reviewed at the Labour Court for fairness.
+
+### Worked example
+
+Scenario: South African employee, **5 years 8 months tenure**, monthly remuneration ZAR 45,000 (weekly = ZAR 10,385 approximately, based on 4.33 weeks/month), retrenched as part of an operational-requirements process. Employer has 120 employees and is retrenching 12 employees in this exercise, so **§189A applies** (50+ employees, 10+ retrenched in the 50 to 200 band).
+
+1. **Notice (BCEA §37)**: tenure >1 year → **4 weeks**, paid as salary or worked.
+2. **Consultation period (§189A)**: minimum **60 days** before notice may be issued. CCMA facilitator either appointed or declined within the statutory window.
+3. **Selection**: criteria agreed during consultation (e.g., LIFO within affected role categories), applied transparently.
+4. **Severance (BCEA §41)**:
+   - 5 completed years of service × 1 week's remuneration = 5 × ZAR 10,385 ≈ **ZAR 51,925**.
+   - Many employers in this scenario voluntarily enhance to 2 weeks per year, yielding ≈ ZAR 103,850.
+5. **Accrued but untaken annual leave**: assume 10 days at ZAR 45,000 / 21.67 working days ≈ ZAR 2,077/day → **ZAR 20,770**.
+6. **Pro-rata 13th cheque or bonus**: per contract; assume none for this example.
+7. **Notice (paid as worked)**: 4 weeks × ZAR 10,385 = **ZAR 41,540**.
+8. **Total exit cost**: approximately **ZAR 114,000 at the statutory minimum**, scaling to **ZAR 166,000 at common enhanced practice** (2 weeks per year severance).
+
+Now alternative scenario: the same employee is dismissed for alleged misconduct (theft), but the employer skips the disciplinary hearing entirely.
+
+1. The employee refers the dispute to the **CCMA within 30 days** of the dismissal.
+2. Conciliation fails. The matter proceeds to **CCMA arbitration**.
+3. The commissioner finds the dismissal procedurally unfair (no hearing) regardless of whether the misconduct is proved. Remedy: typically compensation rather than reinstatement, often in the range of **3 to 6 months' remuneration** (ZAR 135,000 to ZAR 270,000) at the commissioner's discretion under LRA §194(1).
+4. If the dismissal is also found substantively unfair (misconduct not proved on the balance of probabilities), reinstatement with back-pay becomes the default remedy.
+
+### Sources
+
+- South African Government **Constitution of the Republic of South Africa, 1996**: <https://www.gov.za/documents/constitution-republic-south-africa-1996>
+- South African Government **Labour Relations Act 66 of 1995**: <https://www.gov.za/documents/labour-relations-act>
+- South African Government **Basic Conditions of Employment Act 75 of 1997**: <https://www.gov.za/documents/basic-conditions-employment-act>
+- South African Government **Employment Equity Act 55 of 1998**: <https://www.gov.za/documents/employment-equity-act>
+- Department of Employment and Labour **Code of Good Practice: Dismissal (Schedule 8 LRA)**: <https://www.labour.gov.za/code-of-good-practice-dismissal>
+- CCMA **Information Sheets and Rules**: <https://www.ccma.org.za/>
+- CCMA **Guidelines on Misconduct Arbitration**: <https://www.ccma.org.za/resources/guidelines/>
+- Labour Court of South Africa: <https://www.judiciary.org.za/index.php/labour-court>
+- Baker McKenzie *Global Employer Guide: South Africa*: <https://www.bakermckenzie.com/en/insight/publications/guides/global-employer-guide>
+- DLA Piper *Guide to Going Global Employment: South Africa*: <https://www.dlapiperintelligence.com/goingglobal/employment/>
+- Cliffe Dekker Hofmeyr *Employment Law Alert*: <https://www.cliffedekkerhofmeyr.com/en/news/publications/employment.html>
+
+---
+
 ## Engine integration notes
 
 The rules engine in `mcp_servers/jurisdiction_server.py` should expose the following deterministic outputs derived from this document:

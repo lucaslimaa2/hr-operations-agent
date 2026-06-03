@@ -15,6 +15,9 @@ Coverage:
   - FR + non-cadre (default for FR — Art. L1234-1 1/2 month rule)
   - FR + cadre    (manager-level — typically 3 months notice via CCN)
   - ES            (Estatuto de los Trabajadores — despido objetivo / improcedente split)
+  - IT            (Codice Civile Art. 2118 notice via CCNL, Art. 2120 TFR; Jobs Act / Art. 18 split)
+  - SG            (Employment Act §10 tenure brackets, MOM tripartite retrenchment norm)
+  - ZA            (BCEA §37 notice, BCEA §41 severance, LRA §188 fair-reason + fair-procedure)
 
 Any other country resolves to a "not covered" response — see
 UNCOVERED_COUNTRIES_MESSAGE. This is deliberate: per the architectural
@@ -1018,6 +1021,347 @@ ES_FULL_TIME = JurisdictionRule(
 )
 
 
+# -----------------------------------------------------------------------------
+# Italy — white-collar impiegato (Commercio CCNL 3°-4° livello default)
+# Source: docs/jurisdiction.md §"Italy (IT)"
+#
+# Notice (preavviso) is set by the applicable CCNL, not by statute. The engine
+# defaults to the Commercio CCNL impiegato schedule at the 3°-4° livello: 30
+# days <5yr, 45 days 5-10yr, 60 days >10yr. Higher-livello (quadri, dirigenti)
+# notice is materially longer and should be looked up against the actual CCNL.
+# -----------------------------------------------------------------------------
+
+IT_NOTICE_BRACKETS = (
+    NoticeBracket(
+        min_tenure_months=0,
+        max_tenure_months=60,
+        days=30,
+        description="30 days notice (Commercio CCNL impiegato 3°-4° livello default, tenure <5 years)",
+        citation="Codice Civile Art. 2118 + Commercio CCNL",
+    ),
+    NoticeBracket(
+        min_tenure_months=60,
+        max_tenure_months=120,
+        days=45,
+        description="45 days notice (Commercio CCNL impiegato 3°-4° livello default, tenure 5-10 years)",
+        citation="Codice Civile Art. 2118 + Commercio CCNL",
+    ),
+    NoticeBracket(
+        min_tenure_months=120,
+        max_tenure_months=None,
+        days=60,
+        description="60 days notice (Commercio CCNL impiegato 3°-4° livello default, tenure 10+ years)",
+        citation="Codice Civile Art. 2118 + Commercio CCNL",
+    ),
+)
+
+
+IT_FULL_TIME = JurisdictionRule(
+    country="IT",
+    employment_type="full-time",
+    legal_framework=(
+        "Codice Civile Arts. 2118 (preavviso), 2119 (giusta causa), 2120 (TFR); "
+        "Statuto dei Lavoratori (Legge 300/1970) Art. 18; "
+        "Legge 604/1966 (licenziamenti individuali); Legge 223/1991 (licenziamenti collettivi); "
+        "D.Lgs. 23/2015 (Jobs Act, contratto a tutele crescenti for hires from 2015-03-07); "
+        "D.Lgs. 151/2001 (tutela genitorialità). Tribunale del Lavoro jurisdiction."
+    ),
+    employer_notice=NoticeRule(
+        brackets=IT_NOTICE_BRACKETS,
+        description="Statutory deferral to CCNL. Default = Commercio impiegato 3°-4° livello schedule. Verify against the controlling CCNL.",
+        citation="Codice Civile Art. 2118",
+    ),
+    employee_notice=NoticeRule(
+        base_days=30,
+        description="Employee resignation: per applicable CCNL (typically 30 days for impiegato).",
+        citation="Per applicable CCNL",
+    ),
+    severance_components=(
+        SeveranceComponent(
+            name="TFR (Trattamento di Fine Rapporto, Art. 2120 CC)",
+            formula="sum_each_year(gross_annual_salary / 13.5) * (1 + annual_revaluation_rate)",
+            notes="Accrues each year at gross_annual / 13.5 (~7.41%, NOT the 8.33% often quoted). Paid on ANY termination including resignation and giusta causa. Annual revaluation = 1.5% fixed + 75% × ISTAT cost-of-living index. For firms <50 employees: employer pays directly at termination. For larger firms: managed by INPS Fondo di Tesoreria.",
+            citation="Codice Civile Art. 2120",
+        ),
+        SeveranceComponent(
+            name="Indennità sostitutiva del preavviso (PILON equivalent)",
+            formula="(monthly_salary / 30) * notice_days",
+            notes="Owed when notice is not worked (employer-initiated dispense). Not owed for giusta causa.",
+            citation="Codice Civile Art. 2118",
+        ),
+        SeveranceComponent(
+            name="Tredicesima pro-rata (13th month)",
+            formula="(monthly_salary * months_worked_in_year) / 12",
+            notes="Standard 13-month structure; pro-rata portion paid at termination. Some CCNLs add a quattordicesima (14th month, e.g. Metalmeccanico).",
+            citation="Per applicable CCNL",
+        ),
+        SeveranceComponent(
+            name="Ferie accrued but untaken",
+            formula="(monthly_salary / 22) * untaken_vacation_days",
+            citation="Codice Civile + CCNL",
+        ),
+    ),
+    protections=(
+        Protection(
+            name="pregnancy_through_first_birthday",
+            scope="dismissal prohibited from start of pregnancy through child's 1st birthday. Narrow exceptions: giusta causa, cessation of firm activity, end of fixed-term contract.",
+            citation="D.Lgs. 151/2001 Art. 54",
+        ),
+        Protection(
+            name="periodo_di_comporto",
+            scope="employee on sick leave (work-related or general): employment protected for a comporto period set by the CCNL (typically 6-12 months). Dismissal during comporto for absence-related reasons is null.",
+            citation="Codice Civile Art. 2110",
+        ),
+        Protection(
+            name="union_representative",
+            scope="RSA / RSU members: transfers and dismissals require prior union consent or judicial authorisation",
+            citation="Statuto dei Lavoratori (Legge 300/1970) Art. 22",
+        ),
+        Protection(
+            name="parental_leave",
+            scope="protection extends to fathers exercising parental leave rights",
+            citation="D.Lgs. 151/2001",
+        ),
+    ),
+    mandatory_steps=(
+        "Dismissal must be in writing (forma scritta ad substantiam). Oral dismissal is null per Legge 604/1966 Art. 2.",
+        "Letter must state specific grounds; new grounds cannot be raised later in litigation (principio di immodificabilità della motivazione).",
+        "For giustificato motivo soggettivo and giusta causa: follow Statuto dei Lavoratori Art. 7 disciplinary procedure (written contestazione, 5-day window for defence, hearing on request, then dismissal letter).",
+        "For giustificato motivo oggettivo at firms with 15+ employees and pre-2015 hires: prior conciliation at Ispettorato Territoriale del Lavoro (Legge 604/1966 Art. 7 as amended by Legge 92/2012). Jobs Act removed this for tutele crescenti hires.",
+        "Notification by registered letter with acknowledgement, hand delivery against signed receipt, or PEC certified email.",
+    ),
+    final_pay_deadline="TFR + accrued items typically paid at end of preavviso; CCNLs commonly require payment within 30 days of termination.",
+    notes=(
+        "Two unfair-dismissal regimes apply by hire date. "
+        "Hires from 2015-03-07 (contratto a tutele crescenti, D.Lgs. 23/2015): monetary indemnity 2 months/year, floor 6 / cap 36 months at firms 15+ employees (after Corte Cost. 194/2018 struck down the rigid formula); reinstatement reserved for null dismissals and manifest fact-finding defects. "
+        "Pre-2015 hires (Statuto dei Lavoratori Art. 18, as modified by Legge 92/2012 Fornero reform): reinstatement available for the most serious unfair dismissals at firms 15+; indemnity 12-24 months for ordinary unfair dismissal. "
+        "Three grounds for termination: giustificato motivo soggettivo (notable contractual breach), giustificato motivo oggettivo (organizational/economic), giusta causa (Art. 2119 CC, no notice owed). "
+        "Dirigenti follow a separate regime: 'giustificatezza' standard (lower than 'giustificato motivo'), plus CCNL Dirigenti indennità supplementare on unjustified termination."
+    ),
+)
+
+
+# -----------------------------------------------------------------------------
+# Singapore — Employment Act default
+# Source: docs/jurisdiction.md §"Singapore (SG)"
+# -----------------------------------------------------------------------------
+
+SG_NOTICE_BRACKETS = (
+    NoticeBracket(
+        min_tenure_months=0,
+        max_tenure_months=6,
+        days=1,
+        description="1 day statutory minimum (tenure <26 weeks)",
+        citation="Employment Act (Chapter 91) §10",
+    ),
+    NoticeBracket(
+        min_tenure_months=6,
+        max_tenure_months=24,
+        days=7,
+        description="1 week statutory minimum (tenure 26 weeks to <2 years)",
+        citation="Employment Act (Chapter 91) §10",
+    ),
+    NoticeBracket(
+        min_tenure_months=24,
+        max_tenure_months=60,
+        days=14,
+        description="2 weeks statutory minimum (tenure 2 to <5 years)",
+        citation="Employment Act (Chapter 91) §10",
+    ),
+    NoticeBracket(
+        min_tenure_months=60,
+        max_tenure_months=None,
+        days=28,
+        description="4 weeks statutory minimum (tenure 5+ years)",
+        citation="Employment Act (Chapter 91) §10",
+    ),
+)
+
+
+SG_FULL_TIME = JurisdictionRule(
+    country="SG",
+    employment_type="full-time",
+    legal_framework=(
+        "Employment Act 1968 (Chapter 91): §10 (notice), §11 (salary in lieu), §14 (summary dismissal), "
+        "§22 (final-pay timing), §43 (accrued leave), §84 (maternity protection), §86 (sick leave protection). "
+        "Employment Claims Act 2016 (TADM mediation + ECT jurisdiction). "
+        "Employment of Foreign Manpower Act 1990 (work-pass holders). "
+        "Workplace Fairness Act 2025 (statutory anti-discrimination, phased force). "
+        "MOM tripartite guidelines on retrenchment and wrongful dismissal."
+    ),
+    employer_notice=NoticeRule(
+        brackets=SG_NOTICE_BRACKETS,
+        description="Statutory minimum under EA §10. Longer of contract or statutory applies. Contracts typically extend to 1-3 months for PMEs.",
+        citation="Employment Act (Chapter 91) §10",
+    ),
+    employee_notice=NoticeRule(
+        brackets=SG_NOTICE_BRACKETS,
+        description="Symmetrical schedule: employee resignation uses the same statutory minima.",
+        citation="Employment Act (Chapter 91) §10",
+    ),
+    severance_components=(
+        SeveranceComponent(
+            name="Retrenchment benefit (MOM tripartite norm, NOT statutory)",
+            formula="2 to 4 weeks * monthly_salary * years_of_service  # for employees with 2+ years tenure",
+            notes="Customary band: 2 weeks to 1 month of salary per year of service for employees with at least 2 years tenure. Employees <2 years typically receive an ex-gratia goodwill payment. Profitable employers in good standing expected to pay at the upper end. Collective agreement clauses (if applicable) typically more generous.",
+            citation="MOM Tripartite Advisory on Managing Excess Manpower (Dec 2020)",
+        ),
+        SeveranceComponent(
+            name="Salary in lieu of notice",
+            formula="gross_rate_of_pay * unworked_notice_days  # excludes overtime, bonuses, reimbursements",
+            citation="Employment Act (Chapter 91) §11",
+        ),
+        SeveranceComponent(
+            name="Accrued annual leave payout",
+            formula="(monthly_salary / 21) * untaken_leave_days",
+            citation="Employment Act (Chapter 91) §43",
+        ),
+    ),
+    protections=(
+        Protection(
+            name="pregnancy_after_3_months_tenure",
+            scope="employees who have completed 3 months of service and notified the employer of pregnancy: dismissal without sufficient cause entitles employee to maternity benefits as if not dismissed",
+            citation="Employment Act §84",
+        ),
+        Protection(
+            name="hospitalisation_or_certified_sick_leave",
+            scope="dismissal prohibited during certified hospitalisation leave or certified sick leave",
+            citation="Employment Act §86",
+        ),
+        Protection(
+            name="anti_discrimination_pre_act",
+            scope="age, race, gender, religion, nationality, family status, disability, mental health; covered by Tripartite Guidelines on Fair Employment Practices and by the Workplace Fairness Act 2025 as it comes into force",
+            citation="MOM TGFEP; Workplace Fairness Act 2025",
+        ),
+    ),
+    mandatory_steps=(
+        "For summary dismissal (no notice) under §14: employer must conduct due inquiry into the alleged misconduct before dismissing.",
+        "For retrenchment: notify affected employees, pay retrenchment benefit per tripartite norm or collective agreement, file Mandatory Retrenchment Notification (MRN) with MOM if employer has 10+ employees and is retrenching 5+ within any 6-month period (within 5 working days of notifying employees, via MyMOM Portal).",
+        "Pay final salary on last day worked where practicable, in any event within 3 working days (§22).",
+        "For foreign workers (EP / S Pass / Work Permit): cancel work pass within 7 days of last day; employer is responsible for repatriation costs for Work Permit holders.",
+        "Dispute pathway: TADM mediation is mandatory before Employment Claims Tribunal. Statute of limitations for wrongful dismissal claims: 1 month from last day of employment.",
+    ),
+    final_pay_deadline="Last day of employment where practicable; within 3 working days otherwise (Employment Act §22).",
+    notes=(
+        "No statutory severance outside retrenchment. The MOM tripartite norm of 2 weeks to 1 month per year of service IS a strong soft norm enforced through MRN review and tripartite scrutiny, but it is not codified in statute. "
+        "Employment Act coverage was expanded in 2019 to most managerial / executive employees by removing the prior salary cap; §10 notice rules apply universally to covered employees. "
+        "Workplace Fairness Act 2025 will add statutory anti-discrimination protections beyond the existing tripartite norm as it phases in. "
+        "Probation periods are contractual, not statutory; statutory notice minima still apply during probation."
+    ),
+)
+
+
+# -----------------------------------------------------------------------------
+# South Africa — BCEA + LRA
+# Source: docs/jurisdiction.md §"South Africa (ZA)"
+# -----------------------------------------------------------------------------
+
+ZA_NOTICE_BRACKETS = (
+    NoticeBracket(
+        min_tenure_months=0,
+        max_tenure_months=6,
+        days=7,
+        description="1 week statutory minimum (tenure <6 months)",
+        citation="BCEA §37",
+    ),
+    NoticeBracket(
+        min_tenure_months=6,
+        max_tenure_months=12,
+        days=14,
+        description="2 weeks statutory minimum (tenure 6 months to 1 year)",
+        citation="BCEA §37",
+    ),
+    NoticeBracket(
+        min_tenure_months=12,
+        max_tenure_months=None,
+        days=28,
+        description="4 weeks statutory minimum (tenure >1 year)",
+        citation="BCEA §37",
+    ),
+)
+
+
+ZA_FULL_TIME = JurisdictionRule(
+    country="ZA",
+    employment_type="full-time",
+    legal_framework=(
+        "Constitution §23 (right to fair labour practices); "
+        "Labour Relations Act 66 of 1995 (LRA): §185 (right not to be unfairly dismissed), "
+        "§188 (fair reason + fair procedure), §189 (retrenchment), §189A (large-scale retrenchment), "
+        "§187 (automatically unfair dismissals), §197 (transfer as going concern); "
+        "Basic Conditions of Employment Act 75 of 1997 (BCEA): §37 (notice), §40 (payments on termination), §41 (severance); "
+        "Employment Equity Act 55 of 1998 (anti-discrimination); "
+        "LRA Schedule 8 Code of Good Practice: Dismissal. CCMA jurisdiction."
+    ),
+    employer_notice=NoticeRule(
+        brackets=ZA_NOTICE_BRACKETS,
+        description="Statutory minimum under BCEA §37. Symmetrical (same minima for employee resignation). Contract may extend but cannot shorten.",
+        citation="BCEA §37",
+    ),
+    employee_notice=NoticeRule(
+        brackets=ZA_NOTICE_BRACKETS,
+        description="Symmetrical schedule: employee resignation uses the same BCEA §37 minima.",
+        citation="BCEA §37",
+    ),
+    severance_components=(
+        SeveranceComponent(
+            name="Severance pay (retrenchment, BCEA §41)",
+            formula="1 * weekly_remuneration * completed_years_of_service",
+            notes="Statutory minimum on operational-requirements dismissal: 1 week's remuneration per completed year of service. Collective agreements typically provide more. NOT payable on misconduct or incapacity dismissals; ONLY on operational-requirements (retrenchment) dismissals under LRA §189.",
+            citation="BCEA §41",
+        ),
+        SeveranceComponent(
+            name="Payment in lieu of notice",
+            formula="weekly_remuneration * notice_weeks",
+            notes="Employer may pay employee remuneration for the notice period in lieu of working it.",
+            citation="BCEA §38",
+        ),
+        SeveranceComponent(
+            name="Accrued annual leave payout",
+            formula="daily_remuneration * untaken_leave_days",
+            citation="BCEA §40",
+        ),
+    ),
+    protections=(
+        Protection(
+            name="pregnancy_or_maternity_leave",
+            scope="dismissal for pregnancy or intended pregnancy is automatically unfair under LRA §187(1)(e). Remedy includes reinstatement and back-pay.",
+            citation="LRA §187(1)(e)",
+        ),
+        Protection(
+            name="trade_union_activity",
+            scope="dismissal for participating in or supporting a trade union or its lawful activities is automatically unfair",
+            citation="LRA §187(1)(c)",
+        ),
+        Protection(
+            name="discrimination_protected_characteristic",
+            scope="dismissal on grounds of race, gender, sex, ethnic or social origin, colour, sexual orientation, age, disability, religion, conscience, belief, political opinion, culture, language, marital status, family responsibility, or HIV status",
+            citation="LRA §187(1)(f); Employment Equity Act 55 of 1998",
+        ),
+        Protection(
+            name="protected_industrial_action",
+            scope="dismissal for participation in lawful strike or refusal to do work normally done by employees on strike",
+            citation="LRA §187(1)(a)-(b)",
+        ),
+    ),
+    mandatory_steps=(
+        "Dismissal must satisfy a DUAL test under LRA §188: fair reason AND fair procedure. Failure of either renders the dismissal unfair.",
+        "For misconduct or incapacity: follow LRA Schedule 8 Code of Good Practice: investigation, written notification of allegations, hearing where employee can state a case (assisted by a co-employee or shop steward), written outcome with reasons, internal appeal (typical).",
+        "For retrenchment under §189: joint consensus-seeking consultation covering alternatives, selection criteria, severance, and assistance with finding alternative employment.",
+        "For large-scale retrenchment under §189A (50+ employees with scaled thresholds): 60-day consultation period plus either CCMA facilitator or strike action / Labour Court adjudication.",
+        "Notice in writing (BCEA §37(4)); verbal notice permitted only where employee is illiterate.",
+        "Unfair-dismissal disputes: refer to CCMA within 30 days of dismissal (LRA §191(1)). Conciliation first; arbitration (misconduct/incapacity) or Labour Court (retrenchment + complex matters) if unresolved.",
+    ),
+    final_pay_deadline="On termination of employment per BCEA §40.",
+    notes=(
+        "Three permissible reasons for dismissal under LRA §188: misconduct, incapacity (poor performance or ill health), or operational requirements (retrenchment under §189). Any other reason fails substantive fairness. "
+        "Six categories of automatically unfair dismissal under LRA §187: pregnancy, union activity, discrimination, retaliation for exercising LRA rights, protected industrial action, transfer-of-business refusals. Compensation up to 24 months (LRA §194(3)) plus reinstatement available. "
+        "Ordinary unfair dismissal compensation: up to 12 months' remuneration (LRA §194(1)). Reinstatement is the default remedy under §193; compensation only where reinstatement is not reasonably practicable. "
+        "Section 197 (transfer of business as going concern): employees transfer to the new employer with continuity of service and existing terms; no need for fresh consent."
+    ),
+)
+
+
 # =============================================================================
 # Registry + lookup
 # =============================================================================
@@ -1033,6 +1377,9 @@ _RULES: dict[tuple[str, str], JurisdictionRule] = {
     ("FR", "non-cadre"): FR_NON_CADRE,
     ("FR", "cadre"): FR_CADRE,
     ("ES", "full-time"): ES_FULL_TIME,
+    ("IT", "full-time"): IT_FULL_TIME,
+    ("SG", "full-time"): SG_FULL_TIME,
+    ("ZA", "full-time"): ZA_FULL_TIME,
 }
 
 # Synonyms — let the orchestrator pass natural variants without forcing
@@ -1056,12 +1403,12 @@ _EMPLOYMENT_TYPE_ALIASES: dict[str, str] = {
 }
 
 
-COVERED_COUNTRIES: frozenset[str] = frozenset({"BR", "DE", "US-CA", "UK", "FR", "ES"})
+COVERED_COUNTRIES: frozenset[str] = frozenset({"BR", "DE", "US-CA", "UK", "FR", "ES", "IT", "SG", "ZA"})
 
 
 UNCOVERED_COUNTRIES_MESSAGE = (
     "Jurisdiction not covered. This engine has rules for: "
-    "BR (CLT, PJ), DE, US-CA, UK, FR (cadre, non-cadre), ES. "
+    "BR (CLT, PJ), DE, US-CA, UK, FR (cadre, non-cadre), ES, IT, SG, ZA. "
     "For other jurisdictions, recommend specialist legal review before any termination action."
 )
 

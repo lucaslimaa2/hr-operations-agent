@@ -126,8 +126,11 @@ Tools are MCP servers: separate logical units with a defined protocol contract. 
 | United Kingdom (UK) | full-time | ERA 1996 §86, §§94–98, §§135, 162; TULRCA 1992 §188; PIDA 1998; Equality Act 2010 |
 | France (FR) | non-cadre, cadre | Code du travail Art. L1234-1, L1234-9, L1233-61 (PSE), L1235-3 (barème Macron); applicable CCN |
 | Spain (ES) | full-time | Estatuto de los Trabajadores Art. 51, 53, 56; Ley 36/2011 (LRJS) |
+| Italy (IT) | full-time (impiegato default) | Codice Civile Art. 2118 (notice), Art. 2120 (TFR); Legge 223/1991 (collective dismissal); Jobs Act D.Lgs. 23/2015 |
+| Singapore (SG) | full-time | Employment Act (Chapter 91) §10, §11, §22, §43; MOM Tripartite Advisory; Workplace Fairness Act 2025 |
+| South Africa (ZA) | full-time | BCEA §37, §41 (severance); LRA §188, §189, §189A (large-scale), §187 (automatically unfair); CCMA jurisdiction |
 
-Other countries return a structured *"not covered, recommend legal review"* response. Phase 8 (in progress) is expanding to IT, SG, ZA, US-TX, US-NY, with JP and IN as graceful-fallback tests. UK, FR, ES already shipped in batch A.
+Other countries return a structured *"not covered, recommend legal review"* response. Phase 8 (in progress) is still expanding to US-TX and US-NY, with JP and IN as graceful-fallback tests. Batch A (UK + FR + ES) and Batch B1 (IT + SG + ZA) shipped.
 
 ---
 

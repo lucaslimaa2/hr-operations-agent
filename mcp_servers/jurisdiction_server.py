@@ -582,6 +582,127 @@ def _validate_mass_layoff(country: str, ctx: dict[str, Any]) -> dict[str, Any]:
             "citation": "Code du travail Art. L1233-3, L1233-8",
         }
 
+    if country == "IT":
+        # Legge 223/1991 Arts. 4-5: firms 15+ employees, 5+ dismissals at the same
+        # provincia within a 120-day window for the same economic/organisational reasons.
+        triggered = total >= 15 and affected >= 5
+        if not triggered:
+            return {
+                "compliant": True,
+                "reason": (
+                    f"Dismissal of {affected} at a {total}-employee firm does not meet the "
+                    "licenziamento collettivo threshold under Legge 223/1991 (15+ employees AND "
+                    "5+ dismissals in 120 days at the same provincia)."
+                ),
+                "recommendation": (
+                    "Proceed as individual giustificato motivo oggettivo dismissals. Each requires "
+                    "written form, motivated grounds, and (for pre-7-March-2015 hires at firms 15+) "
+                    "prior conciliation at the Ispettorato Territoriale del Lavoro."
+                ),
+                "citation": "Legge 223/1991 Arts. 4-5",
+            }
+        return {
+            "compliant": False,
+            "reason": (
+                f"Dismissal of {affected} at a {total}-employee firm triggers licenziamento "
+                "collettivo procedure under Legge 223/1991. Mandatory three-phase consultation "
+                "(comunicazione di avvio, esame congiunto, notification) with up to 45 days of "
+                "esame congiunto with union representatives."
+            ),
+            "recommendation": (
+                "(1) Comunicazione di avvio: written notification to RSU/sectoral unions AND "
+                "concurrently to Ufficio Provinciale del Lavoro and Direzione Provinciale del "
+                "Lavoro, detailing reasons, profiles of affected employees, timeline, and selection "
+                "criteria. (2) Esame congiunto: up to 45 days of joint consultation. (3) On "
+                "conclusion: notify labour authority of outcome and proceed with individual "
+                "dismissal letters applying selection criteria (carichi di famiglia, anzianità di "
+                "servizio, esigenze tecnico-produttive e organizzative per Art. 5). Failure to "
+                "follow procedure renders dismissals null under the applicable Art. 18 / tutele "
+                "crescenti regime."
+            ),
+            "citation": "Legge 223/1991 Arts. 4-5; selection criteria Art. 5",
+        }
+
+    if country == "SG":
+        # MOM Mandatory Retrenchment Notification: firms with 10+ employees retrenching
+        # 5+ within any 6-month period must file MRN with MOM within 5 working days.
+        mrn_triggered = total >= 10 and affected >= 5
+        if not mrn_triggered:
+            return {
+                "compliant": True,
+                "reason": (
+                    f"Retrenchment of {affected} at a {total}-employee firm does not meet the "
+                    "Mandatory Retrenchment Notification threshold (employer 10+ employees AND "
+                    "5+ retrenchments within any 6-month period)."
+                ),
+                "recommendation": (
+                    "Proceed individually. Pay retrenchment benefit per MOM tripartite norm (2 "
+                    "weeks to 1 month of salary per year of service for employees with 2+ years "
+                    "tenure) and salary in lieu of statutory notice under §10 Employment Act."
+                ),
+                "citation": "MOM Tripartite Advisory (Dec 2020); Employment Act §10",
+            }
+        return {
+            "compliant": False,
+            "reason": (
+                f"Retrenchment of {affected} at a {total}-employee firm triggers the MOM "
+                "Mandatory Retrenchment Notification (MRN) requirement. The MRN must be filed "
+                "within 5 working days of notifying affected employees."
+            ),
+            "recommendation": (
+                "(1) Notify affected employees and pay retrenchment benefit per MOM tripartite "
+                "norm: 2 weeks to 1 month of salary per year of service for employees with 2+ "
+                "years tenure. Profitable employers in good standing pay at the upper end of the "
+                "band. (2) File MRN with MOM via the MyMOM Portal within 5 working days of "
+                "employee notification. (3) For foreign workers (EP/S Pass/Work Permit): cancel "
+                "work pass within 7 days of last day and pay repatriation costs where applicable. "
+                "(4) Final salary on last day or within 3 working days (Employment Act §22)."
+            ),
+            "citation": "MOM MRN rule (effective 2021-11-01); MOM Tripartite Advisory; Employment Act §22",
+        }
+
+    if country == "ZA":
+        # LRA §189A scaled thresholds for large-scale retrenchment.
+        # Employer must have 50+ employees AND affected employees must meet a tenure-scaled
+        # threshold table. Simplified here: trigger §189A if total ≥ 50 AND affected ≥ 10.
+        # §189 (small-scale) always applies if any retrenchment is proposed.
+        if total < 50 or affected < 10:
+            return {
+                "compliant": False,
+                "reason": (
+                    f"Retrenchment of {affected} at a {total}-employee firm triggers LRA §189 "
+                    "(small-scale retrenchment). Joint consensus-seeking consultation required."
+                ),
+                "recommendation": (
+                    "(1) Issue §189(3) notice inviting consultation, covering reasons, proposed "
+                    "dismissals, selection criteria, severance terms, and assistance with finding "
+                    "alternative employment. (2) Joint consensus-seeking consultation with "
+                    "consulting parties (registered union, workplace forum, or affected employees). "
+                    "(3) Pay BCEA §41 severance: minimum 1 week's remuneration per completed year "
+                    "of service. (4) Disputes refer to CCMA within 30 days under LRA §191. Failure "
+                    "to consult procedurally fairly renders the dismissal procedurally unfair "
+                    "(compensation up to 12 months under LRA §194)."
+                ),
+                "citation": "LRA §189; BCEA §41; LRA §191 (CCMA referral)",
+            }
+        return {
+            "compliant": False,
+            "reason": (
+                f"Retrenchment of {affected} at a {total}-employee firm triggers LRA §189A "
+                "(large-scale retrenchment). Extended 60-day consultation period required."
+            ),
+            "recommendation": (
+                "(1) Issue §189(3) notice. (2) 60-day consultation period under §189A(2). "
+                "(3) Either request CCMA-appointed facilitator OR (without facilitator) parties "
+                "may proceed to strike action / Labour Court adjudication after consultation. "
+                "(4) Pay BCEA §41 severance: minimum 1 week's remuneration per completed year of "
+                "service. (5) Disputes refer to CCMA within 30 days under LRA §191. (6) "
+                "Substantive fairness still required under LRA §188: economic / organisational "
+                "rationale must hold up to scrutiny."
+            ),
+            "citation": "LRA §189A; LRA §189; BCEA §41; LRA §191",
+        }
+
     if country == "ES":
         # Estatuto de los Trabajadores Art. 51: despido colectivo thresholds within 90-day window.
         # <100 employees: 10+. 100-300: 10%. >300: 30+. Plus any dismissal of entire workforce >5.
