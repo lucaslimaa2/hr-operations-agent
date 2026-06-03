@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 
-A production-shaped multi-agent system that handles HR workflow requests in natural language. Haiku classifies the intent, Sonnet reasons over three MCP servers (HRIS, jurisdiction rules engine, policy RAG), a conflict resolver gates every write, and every action is audit-logged.
+Handles HR workflow requests in natural language. Haiku classifies the intent, Sonnet reasons over three MCP servers (HRIS, jurisdiction rules engine, policy RAG), a conflict resolver gates every write, and every action is audit-logged.
 
 Built as part of [Lucas Lima's AI portfolio](https://lucaslima.xyz/ai-portfolio).
 
@@ -21,8 +21,6 @@ The user is an HRBP. They type a request like *"Terminate Sarah Chen with 2 week
 3. Gates any mutation through a Haiku-based conflict resolver. The write either executes or returns a structured escalation brief.
 4. Records every request in an audit log with full tool-call trace and per-request cost
 
-The architecture is the point. The MCP boundary, the classifier/orchestrator split, the deterministic compliance engine, the write-gating layers, all production-grade patterns scaled down to a single demo.
-
 ### What's mocked vs what's real
 
 | Mocked | Real |
@@ -33,7 +31,7 @@ The architecture is the point. The MCP boundary, the classifier/orchestrator spl
 |  | Live SSE streaming, live prompt caching, live rate limiting |
 |  | Real audit log with cost tracking and four queryable SQL views |
 
-**The mocks are at the *data* layer. The architecture is production-shaped.** Swapping any mock for the real backend (Workday, Deel, Notion API) is a config change in the relevant MCP server. Orchestrator, classifier, resolver, audit log, UI, and tests don't change.
+The mocks are at the data layer. Swapping any of them for the real backend (Workday, Deel, Notion API) is a config change in the relevant MCP server; the orchestrator, classifier, resolver, audit log, UI, and tests don't change.
 
 ---
 
@@ -56,49 +54,25 @@ flowchart TD
     Write -.->|tool-level audit row<br/>with before/after state| AuditLog
 ```
 
-Each MCP server runs as its own subprocess. The orchestrator launches them per request, discovers their tools at runtime, and forwards Sonnet's tool calls over the MCP protocol. **Swapping a mock for a real backend (Workday, Deel, Notion) is a config change, not a rewrite. That's the property the architecture buys you.**
+Each MCP server runs as its own subprocess. The orchestrator launches them per request, discovers their tools at runtime, and forwards Sonnet's tool calls over the MCP protocol.
 
 ---
 
-## Why this is interesting
+## Design notes
 
-**1. Deterministic compliance, not LLM-inferred.**
-Labor-law rules live as hardcoded structured data in `mcp_servers/jurisdiction_rules.py`, sourced from primary statutes (Lei 12.506/2011, BGB §622, Cal. Lab. Code §201/§203, federal WARN). The LLM never reasons about compliance from training data; it queries the rules engine. Uncovered countries return a structured *"not covered, escalate"* response. Never a guess.
+Labor-law rules live as hardcoded Pydantic models in `mcp_servers/jurisdiction_rules.py`, sourced from primary statutes (Lei 12.506/2011, BGB §622, Cal. Lab. Code §201/§203, federal WARN). The orchestrator queries the engine; it does not reason about compliance from training data. Countries outside the covered set return a structured `{covered: false, message, recommendation}` response. [ADR-0001](docs/adr/0001-bounded-jurisdiction-coverage.md) documents why JP and IN are explicitly out of scope.
 
-**2. Cost discipline as architecture.**
-Routing is a Haiku call (~$0.003). Reasoning is Sonnet (~$0.015–0.040 per request, depending on tool calls). Conflict resolution is Haiku (~$0.003). Using Sonnet for routing would 3–5× the cost with no quality gain. The split is intentional.
+Model choice is split for cost. Haiku for routing (~$0.003 per call), Sonnet for reasoning (~$0.015 to $0.040), Haiku again for the conflict resolver. Routing with Sonnet would cost 3-5x for the same outcome.
 
-**3. Write-gating via deterministic mechanism, not LLM judgment.**
-The orchestrator intercepts any tool in `WRITE_TOOLS` and routes it through the conflict resolver. The resolver returns `auto` or `escalate` with a structured brief. The write tool literally cannot fire without resolver approval. This is structural, not advisory.
+Writes go through a gate. The orchestrator routes any call in `WRITE_TOOLS` to a Haiku conflict resolver, which returns `auto` to execute or `escalate` with a structured brief. Four redundant logs capture every write: the orchestrator's system prompt, the resolver, the write tool's before/after row, and the per-request audit row.
 
-**4. Four layered safety mechanisms for writes.**
-- Sonnet's system prompt refuses non-compliant writes (first line)
-- The orchestrator's conflict resolver gates structurally (second line)
-- The write tool itself logs a before/after audit row before returning (defense even if the first two fail)
-- The orchestrator writes a per-request audit row capturing the full sequence
-
-**5. MCP boundary, not framework lock-in.**
-Tools are MCP servers: separate logical units with a defined protocol contract. Each server is a deployable unit, same interface whether the backing data is a Python dict, a Supabase table, or a live Deel API. The agent layer is vendor-agnostic by construction.
-
-**Transport adapts to the runtime.** On long-running hosts (Railway, Fly.io, local dev), MCP servers run as **subprocesses** communicating via stdio for true process isolation. On Vercel's serverless runtime, where subprocess spawning is unreliable across cold starts, the orchestrator detects `VERCEL=1` and switches to an **in-process adapter** that calls the FastMCP tool functions directly via the same `list_tools()` / `call_tool()` contract. Tool names, schemas, arguments, return shapes are all identical. Only the wire changes.
+Tools sit behind the MCP protocol contract, not in the agent. Each server is one deployable unit; the agent layer does not know whether the backing data is a Supabase table or a live Deel API. On long-running hosts (Railway, Fly.io, local dev) the servers run as subprocesses over stdio. On Vercel, where subprocess spawning is unreliable across cold starts, the orchestrator detects `VERCEL=1` and routes through an in-process adapter that calls the same FastMCP functions directly. Same tool names, same schemas, same return shapes.
 
 ---
 
 ## Status
 
-| Phase | What | Status |
-|---|---|---|
-| 0 | Project setup, env, schema, smoke test | ✅ |
-| 1 | Jurisdiction research: `docs/jurisdiction.md` (BR CLT/PJ, DE, US-CA) | ✅ |
-| 2 | Jurisdiction MCP server | ✅ |
-| 3 | Classifier + Orchestrator + FastAPI + UI + Vercel deploy | ✅ |
-| 4 | HRIS MCP server + 20 seeded employees | ✅ |
-| 5 | Policy RAG server (5 docs, Pinecone, structural chunking) | ✅ |
-| 6 | Conflict resolver + write gating + escalation UI | ✅ |
-| 7 | UI polish | ✅ |
-| 8 | Expand jurisdiction (batch A: UK + FR + ES; batch B: IT + SG + ZA + US-TX + US-NY; batch C: JP + IN graceful-fallback docs) | ✅ |
-| 9 | Hardening: rate limit, prompt caching, CI | ✅ |
-| 10 | Custom domain, portfolio launch | ✅ |
+Phases 0 through 10 are complete; the live deploy at [hr-agent.lucaslima.xyz](https://hr-agent.lucaslima.xyz) reflects the current `main`.
 
 ---
 
@@ -145,7 +119,7 @@ The system handles all of these end-to-end:
 3. *"Terminate Ana Müller with 2 weeks notice."* : HRIS + jurisdiction confirms compliant (DE probation, BGB §622(3))
 4. *"Terminate Sarah Chen with 2 weeks notice."* : HRIS + jurisdiction flags non-compliant (DE 6+ years, BGB §622(2) requires 60 days)
 5. *"Convert Maria Santos from contractor to CLT."* : all three servers (HRIS lookup, conversion policy, vínculo empregatício re-classification risk)
-6. *"What severance is Carlos entitled to?"* : HRIS + jurisdiction (ES, currently returns "not covered" until Phase 8)
+6. *"What severance is Carlos entitled to?"* : HRIS + jurisdiction (ES despido objetivo, 20 days per year of service)
 7. *"What are our offboarding steps?"* : policy only
 8. *"Lay off 60 people at our 200-employee California office."* : Cal-WARN trigger demonstration
 
@@ -210,12 +184,10 @@ Example: `SELECT * FROM daily_cost LIMIT 7;` shows the past week of spend, escal
 Three isolated test scripts, each runnable independently:
 
 ```bash
-uv run python scripts/test_jurisdiction.py   # 12 scenarios, rules engine
+uv run python scripts/test_jurisdiction.py   # 36 scenarios, rules engine
 uv run python scripts/test_classifier.py     # 7 scenarios, Haiku routing
 uv run python scripts/test_resolver.py       # 6 scenarios, auto/escalate decisions
 ```
-
-These exist so any layer's correctness can be defended in isolation, separate from the end-to-end agent flow.
 
 ---
 
@@ -246,26 +218,18 @@ scripts/
 ├── smoke_test.py            # Ping all four external services
 ├── seed_data.py             # Seed 20 mock employees into Supabase
 ├── seed_policies.py         # Chunk + embed + upsert to Pinecone
-├── test_jurisdiction.py     # 12 isolated rules-engine scenarios
+├── test_jurisdiction.py     # 36 isolated rules-engine scenarios
 ├── test_classifier.py       # 7 routing scenarios
 └── test_resolver.py         # 6 conflict-resolver scenarios
 
 docs/
-├── jurisdiction.md          # Authoritative labor-law reference (460 lines, every rule cited)
-├── roadmap.md               # Phase-by-phase plan with status
+├── jurisdiction.md          # Labor-law reference, every rule cited to primary statute
+├── adr/                     # Architecture Decision Records (ADR-0001: bounded coverage)
 └── policies/                # 5 HR handbook markdown docs (offboarding, conversion, comp bands, etc.)
 
 db/
 └── schema.sql               # Supabase schema (employees, audit_log)
 ```
-
----
-
-## Cross-references
-
-- [`docs/jurisdiction.md`](docs/jurisdiction.md): labor-law reference, every rule cited to primary statute
-- [`docs/policies/`](docs/policies/): HR policy markdown corpus (5 docs)
-- [`db/schema.sql`](db/schema.sql): Postgres schema
 
 ---
 
