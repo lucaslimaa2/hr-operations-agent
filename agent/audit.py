@@ -65,7 +65,15 @@ def log_request(
         user_input: the raw natural-language message.
         agents_invoked: list of agent/server names invoked, e.g. ['jurisdiction'].
         tool_calls: list of {tool, args, result} dicts. Full tool-call log.
-        resolution: 'auto' | 'escalate' | 'read_only' | 'error'.
+        resolution: One of:
+            'read_only'    — successful request with no write attempted.
+            'write'        — a write tool executed and returned success.
+            'refused'      — validate_action returned compliant=false, no write fired.
+            'not_covered'  — jurisdiction returned covered=false, no write fired.
+            'escalate'     — conflict resolver returned the escalation brief.
+            'truncated'    — hit the 10-tool-call cap.
+            'out_of_scope' — classifier scope gate rejected the request.
+            'error'        — orchestrator-level exception path.
         escalated: True if the conflict resolver escalated this request.
         cost_usd: total per-request cost (classifier + orchestrator + ...).
     """

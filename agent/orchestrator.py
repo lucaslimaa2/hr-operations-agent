@@ -91,6 +91,50 @@ IS_SERVERLESS = bool(os.environ.get("VERCEL"))
 WRITE_TOOLS: frozenset[str] = frozenset({"update_employment_status"})
 
 
+def _result_text(result: Any) -> str:
+    """Render a tool-call result (str, dict, or list) as a single string for
+    substring inspection in _classify_outcome."""
+    if isinstance(result, str):
+        return result
+    try:
+        return json.dumps(result)
+    except (TypeError, ValueError):
+        return str(result)
+
+
+def _classify_outcome(tool_calls_log: list[dict[str, Any]]) -> str | None:
+    """Inspect tool_calls to refine the audit-log resolution.
+
+    The orchestrator's base resolution is "auto" for any request that finished
+    without escalating, truncating, erroring, or being marked out_of_scope. That
+    collapses three very different outcomes (a read-only lookup, a successful
+    write, and a system-refused write because validation failed) into one label.
+    This helper looks at the actual tool results to pick a precise outcome:
+
+      "write"        — a WRITE_TOOLS call returned success.
+      "refused"      — validate_action returned compliant=false and no write fired.
+      "not_covered"  — jurisdiction returned covered=false and no write fired.
+      None           — no specific pattern matched; caller falls back to "read_only".
+    """
+    # Successful write takes precedence over everything else.
+    for tc in tool_calls_log:
+        if tc.get("tool") in WRITE_TOOLS:
+            result_str = _result_text(tc.get("result"))
+            if '"success": true' in result_str or '"success":true' in result_str:
+                return "write"
+    # No successful write. Did the system refuse on compliance grounds?
+    for tc in tool_calls_log:
+        tool = tc.get("tool", "")
+        result_str = _result_text(tc.get("result"))
+        if tool == "validate_action" and ('"compliant": false' in result_str or '"compliant":false' in result_str):
+            return "refused"
+        if tool in ("get_notice_period", "get_termination_rules", "validate_action") and (
+            '"covered": false' in result_str or '"covered":false' in result_str
+        ):
+            return "not_covered"
+    return None
+
+
 MCP_SERVERS: dict[str, StdioServerParameters] = {
     "jurisdiction": StdioServerParameters(
         command=sys.executable,
@@ -566,7 +610,12 @@ async def run_stream(
         return
 
     # ---------- 4. Audit log + done event ----------
-    # Resolution precedence: escalate > truncated > auto.
+    # When the base resolution is "auto" (no escalation, no truncation, no
+    # out_of_scope), refine it from tool_calls so the audit row distinguishes
+    # read_only from successful write from refused-on-compliance from not-covered.
+    if resolution == "auto":
+        resolution = _classify_outcome(tool_calls_log) or "read_only"
+    # Resolution precedence: escalate > truncated > derived.
     final_resolution = "escalate" if escalated else ("truncated" if truncated else resolution)
     log_request(
         session_id=session_id,
