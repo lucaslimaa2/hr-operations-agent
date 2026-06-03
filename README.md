@@ -100,8 +100,6 @@ Tools are MCP servers: separate logical units with a defined protocol contract. 
 | 9 | Hardening: rate limit, prompt caching, CI | ✅ |
 | 10 | Custom domain, portfolio launch | ✅ |
 
-Full phase plan in [`docs/roadmap.md`](docs/roadmap.md).
-
 ---
 
 ## Stack
@@ -261,7 +259,6 @@ db/
 ## Cross-references
 
 - [`docs/jurisdiction.md`](docs/jurisdiction.md): labor-law reference, every rule cited to primary statute
-- [`docs/roadmap.md`](docs/roadmap.md): phase plan with current status and per-phase defensible decisions
 - [`docs/policies/`](docs/policies/): HR policy markdown corpus (5 docs)
 - [`db/schema.sql`](db/schema.sql): Postgres schema
 
