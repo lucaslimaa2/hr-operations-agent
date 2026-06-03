@@ -6,7 +6,7 @@
 
 Handles HR workflow requests in natural language. Haiku classifies the intent, Sonnet reasons over three MCP servers (HRIS, jurisdiction rules engine, policy RAG), a conflict resolver gates every write, and every action is audit-logged.
 
-Built as part of [Lucas Lima's AI portfolio](https://lucaslima.xyz/ai-portfolio).
+Built as part of [Lucas Lima's Data & AI portfolio](https://lucaslima.xyz/ai-portfolio).
 
 **Live demo:** [hr-agent.lucaslima.xyz](https://hr-agent.lucaslima.xyz)
 
