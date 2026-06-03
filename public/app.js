@@ -396,9 +396,13 @@ function escapeHtml(s) {
 }
 
 // Minimal markdown — **bold**, *italic*, `code`, line breaks. Escapes HTML first.
+// Headings (#..######) collapse to bold, horizontal rules (--- *** ___) get dropped;
+// inside a chat bubble both render as raw text otherwise.
 function formatMarkdownish(text) {
   let html = escapeHtml(text);
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/^[ \t]*[-*_]{3,}[ \t]*$/gm, "");
+  html = html.replace(/^[ \t]*#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$/gm, "<strong>$1</strong>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/(^|\s)\*([^*\s][^*]*?)\*(?=\s|[.,!?;:]|$)/g, "$1<em>$2</em>");
   html = html.replace(/\n/g, "<br>");
