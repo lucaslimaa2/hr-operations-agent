@@ -11,10 +11,15 @@ The streaming endpoint is what the UI uses. The non-streaming endpoint exists
 for programmatic consumers (curl, scripts) where streaming is overkill.
 
 Deploy notes:
-  - On Vercel: serverless Python function. Cold starts include the MCP
-    subprocess spawn — expect ~2s first request, faster thereafter.
-  - CORS is open in development (vanilla HTML/JS UI served from same origin
-    in production but opened locally during dev).
+  - On Vercel: serverless Python function. The orchestrator detects VERCEL=1
+    and runs MCP servers in-process (FastMCP functions called directly via
+    the in-process adapter), so cold-start cost is the FastAPI handler init,
+    not a subprocess spawn. On long-running hosts (Railway, Fly.io, local
+    dev) the orchestrator launches each MCP server as its own subprocess
+    over stdio for true process isolation.
+  - CORS is open (allow_origins=["*"]). Acceptable for this public demo:
+    no auth, no PII, all-synthetic data. If reused in a project with real
+    data, tighten allow_origins to the production frontend's origin.
 """
 
 from __future__ import annotations
