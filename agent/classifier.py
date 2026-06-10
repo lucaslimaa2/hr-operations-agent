@@ -164,8 +164,11 @@ documented "not covered" response that includes the regulatory rationale; route 
 them here anyway so the user gets the structured refusal. Use for any question \
 about termination rules, what's allowed, notice/severance amounts, or \
 country-specific labor law.
-  - hris: employee records (name lookup, employment status, country, tenure). \
-Use whenever a specific employee is mentioned by name or ID.
+  - hris: employee records (name lookup, employment status, country, tenure) \
+AND operational HR data such as payroll calendars (next payroll dates, pay \
+frequency by country). Use whenever a specific employee is mentioned by name \
+or ID, OR when the question is about payroll cycles / pay dates / final-pay \
+timing for a country.
   - policy: company HR policies (offboarding process, approval matrices, comp \
 bands, PIPs, contractor conversion process). Use for "what's our policy on...", \
 "what are the steps for...", "who needs to approve...".

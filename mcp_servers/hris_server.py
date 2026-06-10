@@ -186,9 +186,12 @@ def search_employees(name: str) -> dict[str, Any]:
 def get_payroll_calendar(country: str) -> dict[str, Any]:
     """Return the payroll calendar (frequency + next dates) for a country.
 
-    Use this when the user is processing a termination and needs to know when
-    the final paycheck will be issued. Especially relevant for US-CA where final
-    pay is due IMMEDIATELY at termination — not on the next payroll date.
+    Use this for ANY question about payroll cycles, next payroll dates, pay
+    frequency, or final-paycheck timing in a country. Common triggers:
+    "when's the next payroll in BR?", "what's the pay schedule for our DE team?",
+    "how often are people paid in Italy?", and for terminations, "when will the
+    final paycheck go out?". Especially relevant for US-CA where final pay is
+    due IMMEDIATELY at termination, not on the next payroll date.
 
     Args:
         country: ISO-ish code, e.g. 'BR', 'DE', 'US-CA'.
