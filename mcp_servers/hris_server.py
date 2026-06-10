@@ -38,6 +38,12 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 mcp = FastMCP("hris")
 
+# Hard cap on search_employees results. Prevents bulk-roster enumeration via
+# a single broad query (e.g., empty name, single character). The orchestrator
+# also forbids bulk-listing at the system-prompt layer; this is defense in
+# depth so a future prompt regression cannot reopen the data-exfil vector.
+MAX_SEARCH_RESULTS = 5
+
 
 # =============================================================================
 # Supabase client (lazy)
@@ -158,26 +164,49 @@ def get_employee(employee_id: str) -> dict[str, Any]:
 def search_employees(name: str) -> dict[str, Any]:
     """Search employees by name (case-insensitive, partial match).
 
-    Use this when the user mentions an employee by name (e.g., 'Sarah Chen',
-    'João'). Returns a list of matches — typically 0, 1, or a few. If multiple
-    results come back, ask the user to clarify before acting.
+    Use this when the user mentions a SPECIFIC employee by name (e.g., 'Sarah
+    Chen', 'João'). Returns at most 5 matches. The query string must be at
+    least 2 non-whitespace characters; broader patterns are rejected to
+    prevent bulk-roster enumeration. If the user asks for "every employee" or
+    "the full roster" or similar, do NOT call this tool — refuse the request.
 
     Args:
-        name: full or partial name. Case-insensitive.
+        name: full or partial name. Case-insensitive. Minimum 2 characters.
 
     Returns:
-        {"matches": [employee, ...], "count": int}. Each employee includes the
-        same fields as get_employee. Empty list if no matches.
+        {"matches": [...], "count": int, "truncated": bool, "note"?: str}.
+        Each employee includes the same fields as get_employee. Empty matches
+        list if no hits; "truncated": true if more than 5 employees matched
+        and results were capped.
     """
+    name = (name or "").strip()
+    if len(name) < 2:
+        return {
+            "matches": [],
+            "count": 0,
+            "error": (
+                "Name query must be at least 2 characters. Bulk-roster lookups are "
+                "not supported by this tool; provide a specific name fragment."
+            ),
+        }
     try:
         client = _get_supabase()
         # PostgREST `ilike` = case-insensitive LIKE. Wrap in %...% for partial match.
+        # Fetch one extra row beyond the cap so we can detect overflow without a separate count query.
         pattern = f"%{name}%"
-        resp = client.table("employees").select("*").ilike("name", pattern).execute()
-        matches = resp.data or []
+        resp = client.table("employees").select("*").ilike("name", pattern).limit(MAX_SEARCH_RESULTS + 1).execute()
+        raw_matches = resp.data or []
+        truncated = len(raw_matches) > MAX_SEARCH_RESULTS
+        matches = raw_matches[:MAX_SEARCH_RESULTS]
         for emp in matches:
             emp["tenure_months"] = _tenure_months(emp["start_date"])
-        return {"matches": matches, "count": len(matches)}
+        result: dict[str, Any] = {"matches": matches, "count": len(matches), "truncated": truncated}
+        if truncated:
+            result["note"] = (
+                f"More than {MAX_SEARCH_RESULTS} matches; results capped at {MAX_SEARCH_RESULTS}. "
+                "Ask the user for a more specific name."
+            )
+        return result
     except Exception as e:  # noqa: BLE001
         return {"error": f"{type(e).__name__}: {e}"}
 
